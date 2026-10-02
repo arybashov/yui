@@ -29,6 +29,7 @@ function savedLang(): Lang | null {
 }
 
 const state = new Store<{ lang: Lang }>({ lang: savedLang() ?? langFromCode(navigator.language) });
+document.documentElement.lang = state.get().lang;
 
 function apply(lang: Lang): void {
   state.set({ lang });

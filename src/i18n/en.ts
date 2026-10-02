@@ -20,12 +20,8 @@ export const en: Dict = {
 
   yourName: 'Your name',
   defaultName: 'Player',
-  sound: 'Sound',
-  on: 'On',
-  off: 'Off',
   soundTurnOn: 'Turn sound on',
   soundTurnOff: 'Turn sound off',
-  language: 'Language',
 
   vsBots: 'Play against bots',
   opponents: 'Opponents',
@@ -39,9 +35,7 @@ export const en: Dict = {
   roomCode: 'Room code',
   join: 'Join',
 
-  howToPlay: 'How to play',
-  tutorial: '2-minute tutorial',
-  rulesAsText: 'Rules as text',
+  tutorial: 'Tutorial',
   rules: 'Rules',
   rulesItems: [
     'The deck has 20 cards: tens to aces. Suits do not matter and there are no trumps.',

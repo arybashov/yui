@@ -15,7 +15,7 @@ function useSoundEnabled(): [boolean, (enabled: boolean) => void] {
   return [enabled, change];
 }
 
-/** Круглая кнопка со значком динамика — для верхней панели стола. */
+/** Круглая кнопка со значком динамика: в меню и на столе. */
 export function SoundToggle() {
   const t = useT();
   const [enabled, change] = useSoundEnabled();
@@ -54,24 +54,5 @@ export function SoundToggle() {
         )}
       </svg>
     </button>
-  );
-}
-
-/** Подписанный переключатель «Вкл / Выкл» — для меню. */
-export function SoundSwitch() {
-  const t = useT();
-  const [enabled, change] = useSoundEnabled();
-  return (
-    <div className="field">
-      <span>{t.sound}</span>
-      <div className="segmented">
-        <button type="button" className={enabled ? 'on' : ''} aria-pressed={enabled} onClick={() => change(true)}>
-          {t.on}
-        </button>
-        <button type="button" className={enabled ? '' : 'on'} aria-pressed={!enabled} onClick={() => change(false)}>
-          {t.off}
-        </button>
-      </div>
-    </div>
   );
 }

@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { GAME_TITLE } from '../config';
 import { BotLevel } from '../game/bot';
 import { MAX_PLAYERS } from '../game/engine';
-import { Dict, LANGS, chooseLang, langName, useLang, useT } from '../i18n';
+import { Dict, LANGS, Lang, chooseLang, langName, useLang, useT } from '../i18n';
 import { normalizeRoomCode } from '../net/protocol';
 import { Rules } from './Rules';
-import { SoundSwitch } from './SoundToggle';
+import { SoundToggle } from './SoundToggle';
 
 interface MenuProps {
   name: string;
@@ -24,29 +24,47 @@ export const botLevels = (t: Dict): { id: BotLevel; label: string }[] => [
   { id: 'normal', label: t.botNormal },
 ];
 
-/** Переключатель языка. Языки подписаны на них самих, чтобы его можно было найти, не зная текущего. */
+/** Флаги нарисованы картинками: эмодзи-флаги на Windows показываются буквами. */
+const FLAGS: Record<Lang, React.ReactNode> = {
+  ru: (
+    <svg viewBox="0 0 9 6" preserveAspectRatio="none" aria-hidden="true">
+      <rect width="9" height="2" fill="#fff" />
+      <rect y="2" width="9" height="2" fill="#0039a6" />
+      <rect y="4" width="9" height="2" fill="#d52b1e" />
+    </svg>
+  ),
+  en: (
+    <svg viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <clipPath id="flag-en-quarters">
+        <path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z" />
+      </clipPath>
+      <path d="M0,0 v30 h60 v-30 z" fill="#012169" />
+      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6" />
+      <path d="M0,0 L60,30 M60,0 L0,30" clipPath="url(#flag-en-quarters)" stroke="#c8102e" strokeWidth="4" />
+      <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10" />
+      <path d="M30,0 v30 M0,15 h60" stroke="#c8102e" strokeWidth="6" />
+    </svg>
+  ),
+};
+
+/** Выбор языка флагами: площадка не допускает в интерфейсе текст на другом языке,
+ *  а флаг понятен, даже если текущий язык игроку незнаком. */
 function LanguageSwitch() {
-  const t = useT();
   const lang = useLang();
   return (
-    <div className="field">
-      <span>
-        <span aria-hidden="true">🌐 </span>
-        {t.language}
-      </span>
-      <div className="segmented">
-        {LANGS.map((code) => (
-          <button
-            key={code}
-            type="button"
-            className={code === lang ? 'on' : ''}
-            aria-pressed={code === lang}
-            onClick={() => chooseLang(code)}
-          >
-            {langName(code)}
-          </button>
-        ))}
-      </div>
+    <div className="flags">
+      {LANGS.map((code) => (
+        <button
+          key={code}
+          type="button"
+          className={`flag ${code === lang ? 'on' : ''}`}
+          aria-label={langName(code)}
+          aria-pressed={code === lang}
+          onClick={() => chooseLang(code)}
+        >
+          {FLAGS[code]}
+        </button>
+      ))}
     </div>
   );
 }
@@ -69,22 +87,16 @@ export function Menu({
 
   return (
     <div className="screen">
-      <h1 className="title">{GAME_TITLE}</h1>
-      <p className="muted subtitle">{t.subtitle}</p>
-
-      <div className="panel">
-        <label className="field">
-          <span>{t.yourName}</span>
-          <input
-            value={name}
-            maxLength={16}
-            placeholder={t.defaultName}
-            onChange={(e) => onNameChange(e.target.value)}
-          />
-        </label>
-        <SoundSwitch />
-        <LanguageSwitch />
+      <div className="menu-head">
+        <div className="menu-side">
+          <SoundToggle />
+        </div>
+        <h1 className="title">{GAME_TITLE}</h1>
+        <div className="menu-side end">
+          <LanguageSwitch />
+        </div>
       </div>
+      <p className="muted subtitle">{t.subtitle}</p>
 
       <div className="panel">
         <h2>{t.vsBots}</h2>
@@ -128,6 +140,16 @@ export function Menu({
       {online && (
         <div className="panel">
           <h2>{t.online}</h2>
+          {/* имя видят только соперники по сети, поэтому оно спрашивается здесь */}
+          <label className="field">
+            <span>{t.yourName}</span>
+            <input
+              value={name}
+              maxLength={16}
+              placeholder={t.defaultName}
+              onChange={(e) => onNameChange(e.target.value)}
+            />
+          </label>
           <button type="button" className="btn wide" onClick={onHost}>
             {t.createRoom}
           </button>
@@ -153,13 +175,12 @@ export function Menu({
         </div>
       )}
 
-      <div className="panel">
-        <h2>{t.howToPlay}</h2>
-        <button type="button" className="btn wide" onClick={onTutorial}>
+      <div className="menu-help">
+        <button type="button" className="btn" onClick={onTutorial}>
           {t.tutorial}
         </button>
-        <button type="button" className="btn ghost" onClick={() => setShowRules(true)}>
-          {t.rulesAsText}
+        <button type="button" className="btn" onClick={() => setShowRules(true)}>
+          {t.rules}
         </button>
       </div>
 

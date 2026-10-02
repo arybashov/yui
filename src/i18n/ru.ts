@@ -29,12 +29,8 @@ export const ru: Dict = {
 
   yourName: 'Ваше имя',
   defaultName: 'Игрок',
-  sound: 'Звук',
-  on: 'Вкл',
-  off: 'Выкл',
   soundTurnOn: 'Включить звук',
   soundTurnOff: 'Выключить звук',
-  language: 'Язык',
 
   vsBots: 'Игра с ботами',
   opponents: 'Соперников',
@@ -48,9 +44,7 @@ export const ru: Dict = {
   roomCode: 'Код комнаты',
   join: 'Войти',
 
-  howToPlay: 'Как играть',
-  tutorial: 'Обучение за 2 минуты',
-  rulesAsText: 'Правила текстом',
+  tutorial: 'Обучение',
   rules: 'Правила',
   rulesItems: [
     'В колоде 20 карт: от десятки до туза. Масти не важны, козырей нет.',

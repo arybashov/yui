@@ -23,18 +23,14 @@ export interface LessonText {
 
 /** Все тексты интерфейса на одном языке. */
 export interface Dict {
-  /** название языка на нём самом — для переключателя */
+  /** название языка на нём самом — подпись флага для программ чтения с экрана */
   langName: string;
   subtitle: string;
 
   yourName: string;
   defaultName: string;
-  sound: string;
-  on: string;
-  off: string;
   soundTurnOn: string;
   soundTurnOff: string;
-  language: string;
 
   vsBots: string;
   opponents: string;
@@ -48,9 +44,7 @@ export interface Dict {
   roomCode: string;
   join: string;
 
-  howToPlay: string;
   tutorial: string;
-  rulesAsText: string;
   rules: string;
   rulesItems: string[];
   gotIt: string;
