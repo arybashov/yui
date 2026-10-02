@@ -103,14 +103,17 @@ describe('обычный ход', () => {
     expect(isLegal(hand, pile, play('KS', 'KH'))).toBe(false);
   });
 
-  it('три карты — только на карту того же ранга', () => {
-    expect(isLegal(cards('QS', 'QD', 'QC'), pile, play('QS', 'QD', 'QC'))).toBe(true);
+  it('три одинаковые разом положить нельзя — ни на тот же ранг, ни на младший', () => {
+    expect(isLegal(cards('QS', 'QD', 'QC'), pile, play('QS', 'QD', 'QC'))).toBe(false);
     expect(isLegal(cards('KS', 'KD', 'KC'), pile, play('KS', 'KD', 'KC'))).toBe(false);
+    // по одной — можно
+    expect(isLegal(cards('QS', 'QD', 'QC'), pile, play('QS'))).toBe(true);
   });
 
-  it('три десятки кладутся на 10 пик', () => {
+  it('полка десяток — три карты: четвёртая, 10 пик, лежит на столе', () => {
     const hand = cards('10H', '10D', '10C');
     expect(isLegal(hand, cards('10S'), play('10H', '10D', '10C'))).toBe(true);
+    expect(isLegal(cards('10H', '10D', 'JS'), cards('10S'), play('10H', '10D'))).toBe(false);
   });
 
   it('четыре карты — только старше верхней', () => {

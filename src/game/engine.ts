@@ -34,6 +34,7 @@ export interface GameState {
 export const RANKS: Rank[] = [10, 11, 12, 13, 14];
 export const SUITS: Suit[] = ['S', 'H', 'D', 'C'];
 export const START_CARD_ID = '10S';
+const START_RANK: Rank = 10;
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 5;
 export const TAKE_LIMIT = 3;
@@ -105,8 +106,9 @@ export function legalMoves(hand: Card[], pile: Card[]): Move[] {
     if (rank < top.rank) continue;
     const group = hand.filter((c) => c.rank === rank);
     for (const card of group) moves.push({ type: 'play', cards: [card.id] });
-    // три карты — только на карту того же ранга, четыре — только на младшую
-    if (group.length === 3 && rank === top.rank) {
+    // Разом кладётся только полка — все четыре карты ранга. У десяток четвёртая,
+    // 10 пик, всегда лежит на столе, поэтому их полка — три карты.
+    if (group.length === 3 && rank === START_RANK && top.rank === START_RANK) {
       moves.push({ type: 'play', cards: group.map((c) => c.id) });
     }
     if (group.length === 4 && rank > top.rank) {
