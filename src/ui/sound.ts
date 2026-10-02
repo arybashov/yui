@@ -29,6 +29,15 @@ export function setSoundEnabled(enabled: boolean): void {
 let context: AudioContext | null = null;
 let master: GainNode | null = null;
 let noise: AudioBuffer | null = null;
+let silenced = false;
+
+/** Глушит звук, пока игра не на виду или площадка поставила её на паузу. */
+export function setSoundSilenced(value: boolean): void {
+  silenced = value;
+  if (!context) return;
+  if (value) void context.suspend();
+  else void context.resume();
+}
 
 function audio(): AudioContext | null {
   if (typeof AudioContext === 'undefined') return null;
@@ -113,7 +122,7 @@ export interface SoundOptions {
 }
 
 export function playSound(name: SoundName, options: SoundOptions = {}): void {
-  if (!soundSetting.get().enabled) return;
+  if (silenced || !soundSetting.get().enabled) return;
   try {
     const ctx = audio();
     if (!ctx) return;

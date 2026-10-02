@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "build:yandex": "tsc --noEmit && vite build --mode yandex --outDir dist-yandex && python scripts/zip-yandex.py",
     "build:server": "esbuild server/main.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist-server/server.cjs",
     "server": "npm run build:server && node dist-server/server.cjs"
   },

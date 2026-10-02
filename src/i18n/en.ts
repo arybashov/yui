@@ -1,0 +1,177 @@
+import { Rank } from '../game/engine';
+import { Dict } from './types';
+
+const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'];
+const ordinal = (place: number) => ORDINALS[place - 1] ?? `#${place}`;
+
+const RANK_GROUP: Record<Rank, string> = {
+  10: 'tens',
+  11: 'jacks',
+  12: 'queens',
+  13: 'kings',
+  14: 'aces',
+};
+
+const cards = (n: number) => `${n} ${n === 1 ? 'card' : 'cards'}`;
+
+export const en: Dict = {
+  langName: 'English',
+  subtitle: '20 cards, no suits, no trumps — be the first to shed them all',
+
+  yourName: 'Your name',
+  defaultName: 'Player',
+  sound: 'Sound',
+  on: 'On',
+  off: 'Off',
+  soundTurnOn: 'Turn sound on',
+  soundTurnOff: 'Turn sound off',
+  language: 'Language',
+
+  vsBots: 'Play against bots',
+  opponents: 'Opponents',
+  bots: 'Bots',
+  botEasy: 'Easy',
+  botNormal: 'Normal',
+  play: 'Play',
+
+  online: 'Online with friends',
+  createRoom: 'Create a room',
+  roomCode: 'Room code',
+  join: 'Join',
+
+  howToPlay: 'How to play',
+  tutorial: '2-minute tutorial',
+  rulesAsText: 'Rules as text',
+  rules: 'Rules',
+  rulesItems: [
+    'The deck has 20 cards: tens to aces. Suits do not matter and there are no trumps.',
+    'All cards are dealt out evenly. Whoever holds the 10♠ goes first and must lead with it.',
+    'On your turn, play a card of the same rank as the top card or higher — just tap it.',
+    'Several cards in one turn only as a full set: all four cards of one rank onto any lower card. Two or three equal cards cannot be played together. The tens are the exception: the 10♠ always stays on the table, so the other three tens can be played onto it together.',
+    'Instead of playing, you may take the top three cards of the pile. If you cannot play, you must take. The 10♠ always stays on the table.',
+    'Shed all your cards and you are out of the deal. The last player left holding cards loses.',
+    'If the last player also sheds every card with their final turn, it is a draw and nobody loses.',
+    'The loser of a deal gets a letter: Y, then U, then I. Whoever collects YUI loses the match.',
+  ],
+  gotIt: 'Got it',
+
+  bot: (n) => `Bot ${n}`,
+  botSuffix: '(bot)',
+  youSuffix: '(you)',
+
+  dealing: 'Dealing…',
+  deal: (n) => `Deal ${n}`,
+  yourLetters: 'Your letters for lost deals',
+  exit: 'Leave',
+  toMenu: 'Menu',
+  back: 'Back',
+
+  statusDealOver: 'The deal is over',
+  statusYourTurn: (rank) => `Your turn: play ${rank} or higher`,
+  statusFirstMove: 'Your turn: lead with the 10♠',
+  statusDone: (button) => `Done — press “${button}”`,
+  statusYouOut: (place) => `You went out ${ordinal(place)} — waiting for the deal to end`,
+  statusTurnOf: (name) => `${name} to play`,
+
+  playGroup: (count, rank) => `Play ${count} ${RANK_GROUP[rank]}`,
+  take: (count) => `Take ${cards(count)}`,
+  takeCards: 'Take cards',
+  noCardsLeft: 'You have no cards left',
+  cardsCount: (count) => cards(count),
+  wentOut: (place) => `went out ${ordinal(place)}`,
+  leftWithCards: 'left holding cards',
+  hiddenPile: 'Cards under the top three',
+
+  logYouPlay: (played) => `You play ${played}`,
+  logPlay: (name, played) => `${name} plays ${played}`,
+  logYouTake: (count) => `You take ${cards(count)}`,
+  logTake: (name, count) => `${name} takes ${cards(count)}`,
+
+  resultMatchLostYou: (title) => `You collected ${title} — match lost`,
+  resultMatchLost: (name, title) => `${name} collects ${title} — the match is over`,
+  resultDraw: 'A draw — nobody loses',
+  resultYouLost: 'You are left holding cards',
+  resultWin: 'You win!',
+  resultYouPlace: (place) => `You went out ${ordinal(place)}`,
+  colPlayer: 'Player',
+  colOutcome: 'Result',
+  colLetters: 'Letters',
+  newDeal: 'New deal',
+  newMatch: 'New match',
+  ownerStartsDeal: 'The room owner starts the next deal',
+  ownerStartsMatch: 'The room owner starts the next match',
+
+  tutorialTitle: (step, total) => `Tutorial · step ${step} of ${total}`,
+  next: 'Next',
+  finish: 'Finish',
+  teacher: 'Teacher',
+  you: 'You',
+  tutorialDone: 'Tutorial complete',
+  tutorialDoneText: 'Now you know all the rules. Try a game against an easy bot.',
+  playWithBot: 'Play a bot',
+  lessons: [
+    {
+      text: 'The cards are dealt. Whoever holds the 10♠ goes first and must lead with it. You have it: tap the 10♠.',
+      retry: 'The first move must be the 10♠.',
+      done: 'The 10♠ is on the table and stays there until the deal ends.',
+    },
+    {
+      text: 'The teacher played a queen. Suits do not matter: play a card of the same rank or higher. A jack is lower than a queen, so it is dimmed. Tap any bright card.',
+      retry: 'Play one card: a queen, a king or an ace.',
+      done: 'Right. The higher the card, the harder it is for your opponent to beat.',
+    },
+    {
+      text: 'There is an ace on the table and you have none, so you cannot play. In that case you take the top three cards of the pile. Press “Take 3 cards”.',
+      retry: 'Press “Take 3 cards”.',
+      done: 'The cards are yours and the turn passes to your opponent. You may also take by choice, even when you could play.',
+    },
+    {
+      text: 'The 10♠ is never taken. Right now only two cards lie on top of it, so you take two. Press “Take 2 cards”.',
+      retry: 'Press “Take 2 cards”.',
+      done: 'Only the 10♠ is left on the table. Your opponent has nothing to take and must play a card.',
+    },
+    {
+      text: 'You hold four kings. Four equal cards can be played in one turn onto any lower card. Press the “Play 4 kings” button.',
+      retry: 'One at a time works too, but try the “Play 4 kings” button.',
+      done: 'Four cards gone in a single turn. Two or three equal cards cannot be played together — only one, or all four.',
+    },
+    {
+      text: 'Tens are a special case: one of the four, the 10♠, always lies on the table. So the other three tens can be played onto it together — press “Play 3 tens”.',
+      retry: 'Press the “Play 3 tens” button.',
+      done: 'This works for tens only. Three queens or three kings cannot be played together — only one at a time.',
+    },
+    {
+      text: 'The goal is to shed every card. You have one ace left: tap it to go out.',
+      retry: 'Tap the ace.',
+      done: 'You went out first. The last player left holding cards gets a letter: Y, U, I. Whoever collects YUI loses the match.',
+    },
+  ],
+
+  room: 'Room',
+  copyLink: 'Copy link',
+  linkCopied: 'Link copied',
+  shareHint: 'Send the link or the code to your friends.',
+  shareHintHost: 'Send the link or the code to your friends. Keep this tab open — it runs the game.',
+  players: 'Players',
+  addBots: 'Add bots',
+  waitingPlayers: 'Waiting for players…',
+  startGame: (players) => `Start the game (${players})`,
+  waitingOwner: 'Waiting for the room owner to start…',
+  creatingRoom: 'Creating a room…',
+  connecting: 'Connecting…',
+  reconnecting: 'Reconnecting…',
+  netErrors: {
+    'room-not-found': 'Room not found',
+    'game-started': 'The game has already started',
+    'room-full': 'The room is full',
+    'game-over': 'That game is already over',
+    'server-full': 'The server is full, try again later',
+    'bad-message': 'Server communication error',
+    'cant-create': 'Could not create a room. Check your connection.',
+    'cant-connect': 'Could not connect',
+    'connection-error': 'Connection error',
+    'lost-server': 'Lost connection to the server',
+    'lost-host': 'Lost connection to the room owner',
+    'host-closed': 'The owner closed the room',
+  },
+};

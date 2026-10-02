@@ -4,11 +4,22 @@ import { cardLabel } from './text';
 // Картинки карт лежат в public/cards и нарезаются скриптом art/slice.py.
 export const cardImage = (name: string) => `${import.meta.env.BASE_URL}cards/${name}.webp`;
 
-/** Загружает всю колоду заранее, чтобы карты не появлялись на столе с задержкой. */
-export function preloadCards(): void {
-  for (const name of [...createDeck().map((card) => card.id), 'back']) {
-    new Image().src = cardImage(name);
-  }
+const PRELOAD_TIMEOUT_MS = 8000;
+
+/** Загружает всю колоду заранее, чтобы карты не появлялись на столе с задержкой.
+ *  Завершается, когда картинки загружены (или не загрузились) либо вышло время. */
+export function preloadCards(): Promise<void> {
+  const loads = [...createDeck().map((card) => card.id), 'back'].map(
+    (name) =>
+      new Promise<void>((resolve) => {
+        const image = new Image();
+        image.onload = () => resolve();
+        image.onerror = () => resolve();
+        image.src = cardImage(name);
+      }),
+  );
+  const timeout = new Promise<void>((resolve) => setTimeout(resolve, PRELOAD_TIMEOUT_MS));
+  return Promise.race([Promise.all(loads).then(() => undefined), timeout]);
 }
 
 interface CardViewProps {

@@ -1,36 +1,18 @@
-import { GAME_TITLE } from '../config';
+import { useT } from '../i18n';
 
 export function Rules({ onClose }: { onClose: () => void }) {
+  const t = useT();
   return (
     <div className="overlay" onClick={onClose}>
-      <div className="panel rules" role="dialog" aria-label="Правила" onClick={(e) => e.stopPropagation()}>
-        <h2>Правила</h2>
+      <div className="panel rules" role="dialog" aria-label={t.rules} onClick={(e) => e.stopPropagation()}>
+        <h2>{t.rules}</h2>
         <ul>
-          <li>В колоде 20 карт: от десятки до туза. Масти не важны, козырей нет.</li>
-          <li>Все карты раздаются поровну. Первым ходит тот, у кого 10♠, и только с неё.</li>
-          <li>
-            В свой ход положите карту того же ранга, что верхняя, или старше — просто нажмите на неё.
-          </li>
-          <li>
-            Несколько карт за ход — только полка: все четыре карты одного ранга на любую младшую.
-            Две или три одинаковые разом положить нельзя. Исключение — десятки: 10♠ всегда на
-            столе, поэтому три остальные десятки кладутся на неё разом.
-          </li>
-          <li>
-            Вместо хода можно взять три верхние карты стопки. Если ходить нечем — взять придётся.
-            10♠ всегда остаётся на столе.
-          </li>
-          <li>Сбросили все карты — вышли из игры. Проигрывает тот, кто остался с картами последним.</li>
-          <li>
-            Если последний игрок своим ходом тоже сбрасывает все карты — ничья, проигравшего нет.
-          </li>
-          <li>
-            Проигравший раздачу получает букву: {GAME_TITLE.split('').join(', затем ')}. Кто
-            собрал {GAME_TITLE} — проиграл матч.
-          </li>
+          {t.rulesItems.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
         </ul>
         <button type="button" className="btn primary" onClick={onClose}>
-          Понятно
+          {t.gotIt}
         </button>
       </div>
     </div>

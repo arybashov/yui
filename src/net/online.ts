@@ -1,6 +1,7 @@
 import { BotLevel } from '../game/bot';
 import { Move } from '../game/engine';
 import { PlayerView, Session } from '../game/session';
+import { NetError } from '../i18n/types';
 import { Store } from '../store';
 import { ClientMessage, ServerMessage } from './protocol';
 
@@ -16,7 +17,7 @@ export interface OnlineState {
   names: string[];
   you: number;
   owner: number;
-  error?: string;
+  error?: NetError;
 }
 
 export type RoomEntry = { create: true; name: string } | { code: string; name: string };
@@ -77,7 +78,7 @@ export class OnlineRoom implements Session {
       // отказ посреди партии — это конец партии, а не ошибка входа
       const inGame = this.view !== null;
       this.finished = true;
-      this.state.set({ status: inGame ? 'closed' : 'error', error: message.text });
+      this.state.set({ status: inGame ? 'closed' : 'error', error: message.code });
       this.socket?.close();
     }
   }
@@ -94,9 +95,9 @@ export class OnlineRoom implements Session {
     }
     this.finished = true;
     if (status === 'connecting') {
-      this.state.set({ status: 'error', error: 'Не удалось подключиться к серверу' });
+      this.state.set({ status: 'error', error: 'cant-connect' });
     } else {
-      this.state.set({ status: 'closed', error: 'Связь с сервером потеряна' });
+      this.state.set({ status: 'closed', error: 'lost-server' });
     }
   }
 

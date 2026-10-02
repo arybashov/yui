@@ -1,6 +1,8 @@
 node_modules
 dist
 dist-server
+dist-yandex
+yui-yandex.zip
 *.local
 .~lock.*
 

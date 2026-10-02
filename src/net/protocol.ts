@@ -1,6 +1,7 @@
 import { BotLevel } from '../game/bot';
 import { Move } from '../game/engine';
 import { PlayerView } from '../game/session';
+import { NetError } from '../i18n/types';
 
 // Сообщения между браузером и игровым сервером (JSON поверх WebSocket).
 
@@ -18,7 +19,7 @@ export type ServerMessage =
   | { t: 'joined'; code: string; token: string }
   | { t: 'lobby'; names: string[]; you: number; owner: number }
   | { t: 'view'; view: PlayerView }
-  | { t: 'error'; text: string };
+  | { t: 'error'; code: NetError };
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const CODE_LENGTH = 5;

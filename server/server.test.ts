@@ -107,7 +107,7 @@ describe('игровой сервер', () => {
   it('не пускает в несуществующую комнату', async () => {
     const player = await connect();
     player.send({ t: 'join', code: 'ZZZZZ', name: 'Кто-то' });
-    expect((await player.next('error')).text).toBe('Комната не найдена');
+    expect((await player.next('error')).code).toBe('room-not-found');
   });
 
   it('начать игру может только создатель', async () => {
@@ -144,7 +144,7 @@ describe('игровой сервер', () => {
     const { anna } = await startedRoom();
     await anna.view();
     anna.socket.send('это не json');
-    expect((await anna.next('error')).text).toBe('Непонятное сообщение');
+    expect((await anna.next('error')).code).toBe('bad-message');
     anna.send({ t: 'move', move: { type: 'play', cards: 'все' } } as unknown as ClientMessage);
     anna.send({ t: 'newDeal' });
     // соединение живо, партия продолжается
@@ -157,14 +157,15 @@ describe('игровой сервер', () => {
     boris.socket.close();
 
     const away = await anna.view((view) => view.players[1].isBot);
-    expect(away.players[1].name).toBe('Борис (бот)');
+    expect(away.players[1].away).toBe(true);
+    expect(away.players[1].name).toBe('Борис');
 
     const back = await connect();
     back.send({ t: 'rejoin', code, token: borisToken });
     const mine = await back.view();
     expect(mine.seat).toBe(1);
     const restored = await anna.view((view) => !view.players[1].isBot);
-    expect(restored.players[1].name).toBe('Борис');
+    expect(restored.players[1].away).toBe(false);
   });
 
   it('когда создатель отключился, новые раздачи запускает другой игрок', async () => {
@@ -184,7 +185,7 @@ describe('игровой сервер', () => {
     if (first.turn === 0) anna.send({ t: 'move', move: { type: 'play', cards: ['10S'] } });
     // ход бота виден по тому, что очередь снова дошла до игрока
     const later = await anna.view((view) => view.turn === 0 && view.moveNo >= 1 && view.pile.length > 0);
-    expect(later.players[1].name).toBe('Бот 1');
+    expect(later.players[1].name).toBe('Bot 1');
     expect(later.log.some((entry) => entry.player === 1)).toBe(true);
   });
 
@@ -193,6 +194,6 @@ describe('игровой сервер', () => {
     await anna.view();
     const stranger = await connect();
     stranger.send({ t: 'rejoin', code, token: 'не тот ключ' });
-    expect((await stranger.next('error')).text).toBe('Партия уже закончилась');
+    expect((await stranger.next('error')).code).toBe('game-over');
   });
 });

@@ -1,36 +1,25 @@
 import { Card, LogEntry, Rank, Suit } from '../game/engine';
+import { PlayerInfo, botNumber } from '../game/session';
+import { Dict } from '../i18n';
 
 // те же обозначения, что нарисованы на самих картах
 const RANK_LABELS: Record<Rank, string> = { 10: '10', 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
 const SUIT_SYMBOLS: Record<Suit, string> = { S: '♠', H: '♥', D: '♦', C: '♣' };
 
-/** Название ранга после «три» и «четыре»: «Положить 4 короля». */
-const RANK_GROUP_NAMES: Record<Rank, string> = {
-  10: 'десятки',
-  11: 'валета',
-  12: 'дамы',
-  13: 'короля',
-  14: 'туза',
-};
-
-export const rankGroupName = (rank: Rank) => RANK_GROUP_NAMES[rank];
 export const rankLabel = (rank: Rank) => RANK_LABELS[rank];
-export const suitSymbol = (suit: Suit) => SUIT_SYMBOLS[suit];
-export const cardLabel = (card: Card) => `${rankLabel(card.rank)}${suitSymbol(card.suit)}`;
+export const cardLabel = (card: Card) => `${rankLabel(card.rank)}${SUIT_SYMBOLS[card.suit]}`;
 
-export function plural(n: number, one: string, few: string, many: string): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return one;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
-  return many;
+/** Имя игрока на экране: боты называются на языке интерфейса. */
+export function playerName(player: PlayerInfo, t: Dict): string {
+  const bot = botNumber(player);
+  if (bot !== null) return t.bot(bot);
+  return player.away ? `${player.name} ${t.botSuffix}` : player.name;
 }
 
-export const cardsWord = (n: number) => `${n} ${plural(n, 'карту', 'карты', 'карт')}`;
-
-export function describeAction(entry: LogEntry, name: string, isYou: boolean): string {
+export function describeAction(entry: LogEntry, name: string, isYou: boolean, t: Dict): string {
   if (entry.type === 'take') {
-    return `${isYou ? 'Вы берёте' : `${name} берёт`} ${cardsWord(entry.cards.length)}`;
+    return isYou ? t.logYouTake(entry.cards.length) : t.logTake(name, entry.cards.length);
   }
-  return `${isYou ? 'Вы кладёте' : `${name} кладёт`} ${entry.cards.map(cardLabel).join(' ')}`;
+  const cards = entry.cards.map(cardLabel).join(' ');
+  return isYou ? t.logYouPlay(cards) : t.logPlay(name, cards);
 }

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BotLevel } from './game/bot';
-import { HostSeat, HostSession } from './game/session';
+import { HostSeat, HostSession, botSeatName } from './game/session';
+import { useT } from './i18n';
 import { OnlineRoom, SERVER_URL } from './net/online';
 import { normalizeRoomCode } from './net/protocol';
 import { GuestClient, HostRoom } from './net/room';
+import { IS_YANDEX, invitePayload, platformPause } from './platform/yandex';
 import { Menu } from './ui/Menu';
 import { GuestScreen, HostScreen, OnlineScreen } from './ui/Online';
 import { Table } from './ui/Table';
@@ -18,6 +20,9 @@ type Screen =
   | { kind: 'guest'; client: GuestClient; code: string };
 
 const NAME_KEY = 'yui.name';
+/** На Яндекс Играх сеть доступна только через свой сервер: прямое соединение
+ *  между браузерами идёт через сторонний сервис, а это площадка не разрешает. */
+const ONLINE_AVAILABLE = Boolean(SERVER_URL) || !IS_YANDEX;
 
 function loadName(): string {
   try {
@@ -36,12 +41,20 @@ function saveName(name: string): void {
 }
 
 export function App() {
+  const t = useT();
   const [screen, setScreen] = useState<Screen>({ kind: 'menu' });
   const [name, setName] = useState(loadName);
   const [roomCode] = useState(() =>
-    normalizeRoomCode(new URLSearchParams(location.search).get('room') ?? ''),
+    normalizeRoomCode(new URLSearchParams(location.search).get('room') ?? invitePayload()),
   );
-  const playerName = name.trim() || 'Игрок';
+  const playerName = name.trim() || t.defaultName;
+
+  // Пока площадка держит игру на паузе (реклама, свёрнутое окно), боты не ходят.
+  const localSession = screen.kind === 'local' ? screen.session : null;
+  useEffect(() => {
+    if (!localSession) return;
+    return platformPause.subscribe(({ paused }) => localSession.setPaused(paused));
+  }, [localSession]);
 
   const toMenu = () => {
     if (screen.kind === 'local') screen.session.leave();
@@ -54,7 +67,7 @@ export function App() {
   const playBots = (opponents: number, level: BotLevel) => {
     const seats: HostSeat[] = [
       { name: playerName, kind: 'local' },
-      ...Array.from({ length: opponents }, (_, i): HostSeat => ({ name: `Бот ${i + 1}`, kind: 'bot' })),
+      ...Array.from({ length: opponents }, (_, i): HostSeat => ({ name: botSeatName(i + 1), kind: 'bot' })),
     ];
     const session = new HostSession(seats, { botLevel: level });
     session.start();
@@ -71,6 +84,7 @@ export function App() {
             saveName(next);
           }}
           initialCode={roomCode}
+          online={ONLINE_AVAILABLE}
           onPlayBots={playBots}
           onHost={() =>
             setScreen(

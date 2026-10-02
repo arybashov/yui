@@ -3,7 +3,7 @@ import { createServer, Server } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { BotLevel } from '../src/game/bot';
 import { MAX_PLAYERS, MIN_PLAYERS, Move } from '../src/game/engine';
-import { HostSeat, HostSession } from '../src/game/session';
+import { HostSeat, HostSession, botSeatName } from '../src/game/session';
 import {
   ClientMessage,
   NAME_LENGTH,
@@ -46,7 +46,7 @@ function send(socket: WebSocket | null, message: ServerMessage): void {
 }
 
 function cleanName(raw: unknown): string {
-  return String(raw ?? '').trim().slice(0, NAME_LENGTH) || 'Игрок';
+  return String(raw ?? '').trim().slice(0, NAME_LENGTH) || 'Player';
 }
 
 function parseMove(raw: unknown): Move | null {
@@ -113,7 +113,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
 
     if (message.t === 'create') {
       if (seat) return;
-      if (rooms.size >= MAX_ROOMS) return send(socket, { t: 'error', text: 'Сервер переполнен, попробуйте позже' });
+      if (rooms.size >= MAX_ROOMS) return send(socket, { t: 'error', code: 'server-full' });
       let code = makeRoomCode();
       while (rooms.has(code)) code = makeRoomCode();
       const room: Room = { code, members: [], session: null, cleanup: null };
@@ -125,9 +125,9 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     if (message.t === 'join') {
       if (seat) return;
       const room = rooms.get(normalizeRoomCode(String(message.code ?? '')));
-      if (!room) return send(socket, { t: 'error', text: 'Комната не найдена' });
-      if (room.session) return send(socket, { t: 'error', text: 'Игра уже идёт' });
-      if (room.members.length >= MAX_PLAYERS) return send(socket, { t: 'error', text: 'Комната заполнена' });
+      if (!room) return send(socket, { t: 'error', code: 'room-not-found' });
+      if (room.session) return send(socket, { t: 'error', code: 'game-started' });
+      if (room.members.length >= MAX_PLAYERS) return send(socket, { t: 'error', code: 'room-full' });
       enter(socket, room, cleanName(message.name));
       return;
     }
@@ -137,7 +137,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       const room = rooms.get(normalizeRoomCode(String(message.code ?? '')));
       const index = room ? room.members.findIndex((m) => m.token === message.token) : -1;
       if (!room || !room.session || index < 0) {
-        return send(socket, { t: 'error', text: 'Партия уже закончилась' });
+        return send(socket, { t: 'error', code: 'game-over' });
       }
       const member = room.members[index];
       if (member.socket) {
@@ -172,7 +172,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
             send: (view) => send(m.socket, { t: 'view', view }),
           }),
         ),
-        ...Array.from({ length: bots }, (_, i): HostSeat => ({ name: `Бот ${i + 1}`, kind: 'bot' })),
+        ...Array.from({ length: bots }, (_, i): HostSeat => ({ name: botSeatName(i + 1), kind: 'bot' })),
       ];
       room.session = new HostSession(hostSeats, {
         botLevel: level,
@@ -220,7 +220,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       try {
         onMessage(socket, JSON.parse(String(data)) as ClientMessage);
       } catch {
-        send(socket, { t: 'error', text: 'Непонятное сообщение' });
+        send(socket, { t: 'error', code: 'bad-message' });
       }
     });
     socket.on('close', () => onClose(socket));

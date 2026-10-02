@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useT } from '../i18n';
 import { playSound, setSoundEnabled, soundSetting } from './sound';
 
 function useSoundEnabled(): [boolean, (enabled: boolean) => void] {
@@ -16,8 +17,9 @@ function useSoundEnabled(): [boolean, (enabled: boolean) => void] {
 
 /** Круглая кнопка со значком динамика — для верхней панели стола. */
 export function SoundToggle() {
+  const t = useT();
   const [enabled, change] = useSoundEnabled();
-  const label = enabled ? 'Выключить звук' : 'Включить звук';
+  const label = enabled ? t.soundTurnOff : t.soundTurnOn;
   return (
     <button
       type="button"
@@ -57,16 +59,17 @@ export function SoundToggle() {
 
 /** Подписанный переключатель «Вкл / Выкл» — для меню. */
 export function SoundSwitch() {
+  const t = useT();
   const [enabled, change] = useSoundEnabled();
   return (
     <div className="field">
-      <span>Звук</span>
+      <span>{t.sound}</span>
       <div className="segmented">
         <button type="button" className={enabled ? 'on' : ''} aria-pressed={enabled} onClick={() => change(true)}>
-          Вкл
+          {t.on}
         </button>
         <button type="button" className={enabled ? '' : 'on'} aria-pressed={!enabled} onClick={() => change(false)}>
-          Выкл
+          {t.off}
         </button>
       </div>
     </div>

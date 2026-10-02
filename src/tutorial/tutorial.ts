@@ -1,13 +1,13 @@
-import { GAME_TITLE } from '../config';
 import { Card, LogEntry, Move, createDeck, sortHand, takeCount } from '../game/engine';
 import { PlayerView, Session } from '../game/session';
+import { LessonText } from '../i18n/types';
 import { Store } from '../store';
 
 // Обучение — цепочка коротких позиций на обычном столе. В каждой нужно сделать
 // один ход, который показывает правило; партия при этом не разыгрывается.
+// Тексты шагов лежат в словарях (i18n), в том же порядке, что и позиции здесь.
 
 interface Lesson {
-  text: string;
   /** карты записаны как 10S, JH, QD, KC, AS */
   hand: string;
   pile: string;
@@ -15,84 +15,26 @@ interface Lesson {
   /** сколько верхних карт стопки показать в журнале как ход учителя */
   teacherPlayed: number;
   accept: (move: Move) => boolean;
-  retry: string;
-  done: string;
 }
 
 const isPlay = (move: Move, count: number) => move.type === 'play' && move.cards.length === count;
 const isTake = (move: Move) => move.type === 'take';
 
 const LESSONS: Lesson[] = [
-  {
-    text: 'Карты розданы. Первым ходит тот, у кого 10♠, и только с неё. Она у вас: нажмите на 10♠.',
-    hand: '10S JH QD KC AS',
-    pile: '',
-    teacherCards: 5,
-    teacherPlayed: 0,
-    accept: (move) => isPlay(move, 1),
-    retry: 'Первый ход — только 10♠.',
-    done: '10♠ легла на стол и останется там до конца раздачи.',
-  },
-  {
-    text: 'Учитель положил даму. Масти не важны: кладите карту того же ранга или старше. Валет младше дамы — он затемнён. Нажмите на любую светлую карту.',
-    hand: 'JD QC KS AH',
-    pile: '10S QH',
-    teacherCards: 4,
-    teacherPlayed: 1,
-    accept: (move) => isPlay(move, 1),
-    retry: 'Положите одну карту: даму, короля или туза.',
-    done: 'Верно. Чем старше карта, тем труднее сопернику её перебить.',
-  },
-  {
-    text: 'На столе туз, а туза у вас нет — ходить нечем. В таком случае берут три верхние карты стопки. Нажмите «Взять 3 карты».',
-    hand: '10D JS QS',
-    pile: '10S JH KD AC',
-    teacherCards: 3,
-    teacherPlayed: 1,
-    accept: isTake,
-    retry: 'Нажмите «Взять 3 карты».',
-    done: 'Карты у вас, ход переходит сопернику. Брать можно и по желанию — даже когда есть чем ходить.',
-  },
-  {
-    text: '10♠ никогда не берут. Сейчас поверх неё только две карты — значит, возьмёте две. Нажмите «Взять 2 карты».',
-    hand: 'QS QD',
-    pile: '10S KH AD',
-    teacherCards: 4,
-    teacherPlayed: 1,
-    accept: isTake,
-    retry: 'Нажмите «Взять 2 карты».',
-    done: 'На столе осталась одна 10♠. Теперь сопернику брать нечего — он обязан положить карту.',
-  },
-  {
-    text: 'У вас четыре короля. Четыре одинаковые карты можно положить за один ход на любую младшую карту. Нажмите кнопку «Положить 4 короля».',
-    hand: 'KS KH KD KC AS',
-    pile: '10S JH',
-    teacherCards: 5,
-    teacherPlayed: 1,
-    accept: (move) => isPlay(move, 4),
-    retry: 'Можно и по одной, но попробуйте кнопку «Положить 4 короля».',
-    done: 'Четыре карты ушли одним ходом. Две или три одинаковые сразу положить нельзя — только одну или все четыре.',
-  },
-  {
-    text: 'У десяток особый случай: одна из четырёх, 10♠, всегда лежит на столе. Поэтому три остальные десятки можно положить на неё разом — нажмите «Положить 3 десятки».',
-    hand: '10H 10D 10C JS',
-    pile: '10S',
-    teacherCards: 6,
-    teacherPlayed: 0,
-    accept: (move) => isPlay(move, 3),
-    retry: 'Нажмите кнопку «Положить 3 десятки».',
-    done: 'Так можно только с десятками. Три дамы или три короля разом не кладутся — только по одной.',
-  },
-  {
-    text: 'Цель — сбросить все карты. У вас остался один туз: нажмите на него и выйдите из игры.',
-    hand: 'AS',
-    pile: '10S KH',
-    teacherCards: 3,
-    teacherPlayed: 1,
-    accept: (move) => isPlay(move, 1),
-    retry: 'Нажмите на туза.',
-    done: `Вы вышли первым. Кто остался с картами последним, получает букву: ${GAME_TITLE.split('').join(', ')}. Собравший ${GAME_TITLE} проигрывает матч.`,
-  },
+  // первый ход — только с 10 пик
+  { hand: '10S JH QD KC AS', pile: '', teacherCards: 5, teacherPlayed: 0, accept: (m) => isPlay(m, 1) },
+  // карта того же ранга или старше
+  { hand: 'JD QC KS AH', pile: '10S QH', teacherCards: 4, teacherPlayed: 1, accept: (m) => isPlay(m, 1) },
+  // ходить нечем — берём три карты
+  { hand: '10D JS QS', pile: '10S JH KD AC', teacherCards: 3, teacherPlayed: 1, accept: isTake },
+  // 10 пик не берут
+  { hand: 'QS QD', pile: '10S KH AD', teacherCards: 4, teacherPlayed: 1, accept: isTake },
+  // четыре одинаковые разом
+  { hand: 'KS KH KD KC AS', pile: '10S JH', teacherCards: 5, teacherPlayed: 1, accept: (m) => isPlay(m, 4) },
+  // три десятки на 10 пик
+  { hand: '10H 10D 10C JS', pile: '10S', teacherCards: 6, teacherPlayed: 0, accept: (m) => isPlay(m, 3) },
+  // сбросить последнюю карту
+  { hand: 'AS', pile: '10S KH', teacherCards: 3, teacherPlayed: 1, accept: (m) => isPlay(m, 1) },
 ];
 
 const FACES: Record<string, string> = { J: '11', Q: '12', K: '13', A: '14' };
@@ -113,7 +55,8 @@ function parseCards(list: string): Card[] {
 export interface CoachState {
   step: number;
   total: number;
-  text: string;
+  /** какой из текстов шага показывать: задание, подсказку после неверного хода или итог */
+  message: keyof LessonText;
   /** нужный ход сделан, можно идти дальше */
   solved: boolean;
   finished: boolean;
@@ -126,7 +69,7 @@ export class TutorialSession implements Session {
   readonly coach = new Store<CoachState>({
     step: 0,
     total: LESSONS.length,
-    text: LESSONS[0].text,
+    message: 'text',
     solved: false,
     finished: false,
   });
@@ -135,7 +78,7 @@ export class TutorialSession implements Session {
   private log: LogEntry[] = [];
   private listeners = new Set<(view: PlayerView) => void>();
 
-  constructor() {
+  constructor(private names: { you: string; teacher: string }) {
     this.load(0);
   }
 
@@ -147,17 +90,18 @@ export class TutorialSession implements Session {
       lesson.teacherPlayed > 0
         ? [{ player: TEACHER, type: 'play', cards: this.pile.slice(-lesson.teacherPlayed) }]
         : [];
-    this.coach.set({ step, text: lesson.text, solved: false });
+    this.coach.set({ step, message: 'text', solved: false });
     this.emit();
   }
 
   private view(): PlayerView {
     const { step, solved } = this.coach.get();
+    const player = { isBot: false, away: false, place: null, losses: 0 };
     return {
       seat: STUDENT,
       players: [
-        { name: 'Вы', isBot: false, count: this.hand.length, place: null, losses: 0 },
-        { name: 'Учитель', isBot: true, count: LESSONS[step].teacherCards, place: null, losses: 0 },
+        { ...player, name: this.names.you, count: this.hand.length },
+        { ...player, name: this.names.teacher, isBot: true, count: LESSONS[step].teacherCards },
       ],
       hand: this.hand,
       pile: this.pile,
@@ -186,9 +130,8 @@ export class TutorialSession implements Session {
   move(move: Move): void {
     const { step, solved } = this.coach.get();
     if (solved) return;
-    const lesson = LESSONS[step];
-    if (!lesson.accept(move)) {
-      this.coach.set({ text: lesson.retry });
+    if (!LESSONS[step].accept(move)) {
+      this.coach.set({ message: 'retry' });
       return;
     }
     if (move.type === 'take') {
@@ -203,7 +146,7 @@ export class TutorialSession implements Session {
       this.pile = [...this.pile, ...played];
       this.log = [...this.log, { player: STUDENT, type: 'play', cards: played }];
     }
-    this.coach.set({ text: lesson.done, solved: true });
+    this.coach.set({ message: 'done', solved: true });
     this.emit();
   }
 

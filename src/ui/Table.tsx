@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { GAME_TITLE } from '../config';
 import { Card, legalMoves, takeCount } from '../game/engine';
 import { PlayerInfo, PlayerView, Session } from '../game/session';
+import { useT } from '../i18n';
+import { markGameplay, showInterstitial } from '../platform/yandex';
 import { useCardAnimations } from './animations';
 import { CardBack, CardView } from './CardView';
 import { Rules } from './Rules';
 import { playSound } from './sound';
 import { SoundToggle } from './SoundToggle';
-import { cardsWord, describeAction, plural, rankGroupName, rankLabel } from './text';
+import { describeAction, playerName, rankLabel } from './text';
 
 interface TableProps {
   session: Session;
@@ -30,6 +32,7 @@ const MAX_BACKS = 10;
 const PILE_TOP = 3;
 
 export function Table({ session, onExit, notice, coach }: TableProps) {
+  const t = useT();
   const [view, setView] = useState<PlayerView | null>(null);
   const [showRules, setShowRules] = useState(false);
 
@@ -47,10 +50,17 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
 
   useCardAnimations(tableRef, view, tutorial);
 
+  // Площадке сообщаем, идёт ли игровой процесс: раздача без открытых поверх неё окон.
+  const inPlay = view?.phase === 'playing' && !showRules && !notice;
+  useEffect(() => {
+    markGameplay(inPlay);
+  }, [inPlay]);
+  useEffect(() => () => markGameplay(false), []);
+
   if (!view) {
     return (
       <div className="screen">
-        <p className="muted">Раздаём карты…</p>
+        <p className="muted">{t.dealing}</p>
       </div>
     );
   }
@@ -72,27 +82,33 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
 
   let status: string;
   if (!playing) {
-    status = 'Раздача окончена';
+    status = t.statusDealOver;
   } else if (myTurn) {
-    status = top ? `Ваш ход: карта не ниже «${rankLabel(top.rank)}»` : 'Ваш ход: начните с 10♠';
+    status = top ? t.statusYourTurn(rankLabel(top.rank)) : t.statusFirstMove;
   } else if (coach) {
-    status = `Готово — нажмите «${coach.nextLabel}»`;
+    status = t.statusDone(coach.nextLabel);
   } else if (players[me].place !== null) {
-    status = `Вы вышли ${ordinal(players[me].place!)} — ждём конца раздачи`;
+    status = t.statusYouOut(players[me].place!);
   } else {
-    status = `Ходит ${players[view.turn].name}`;
+    status = t.statusTurnOf(playerName(players[view.turn], t));
   }
 
   const opponents = players.map((_, i) => (me + i) % players.length).slice(1);
   const recent = view.log.slice(-3).reverse();
 
+  // Между раздачами — логическая пауза: здесь площадка может показать рекламу.
+  const newDeal = async () => {
+    await showInterstitial();
+    session.newDeal();
+  };
+
   return (
     <div className="table" ref={tableRef}>
       <header className="topbar">
         <span className="brand">{GAME_TITLE}</span>
-        <span className="muted">{coach ? coach.title : `Раздача ${view.dealNo}`}</span>
+        <span className="muted">{coach ? coach.title : t.deal(view.dealNo)}</span>
         {players[me].losses > 0 && (
-          <span className="letters" title="Ваши буквы за проигранные раздачи">
+          <span className="letters" title={t.yourLetters}>
             {letters(players[me].losses)}
           </span>
         )}
@@ -101,14 +117,14 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
         <button
           type="button"
           className="btn icon"
-          aria-label="Правила"
-          title="Правила"
+          aria-label={t.rules}
+          title={t.rules}
           onClick={() => setShowRules(true)}
         >
           ?
         </button>
         <button type="button" className="btn small" onClick={onExit}>
-          Выйти
+          {t.exit}
         </button>
       </header>
 
@@ -138,7 +154,7 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
         <div className="log" aria-live="polite">
           {recent.map((entry, i) => (
             <div key={view.log.length - i} className={i === 0 ? 'log-last' : 'log-old'}>
-              {describeAction(entry, players[entry.player].name, entry.player === me)}
+              {describeAction(entry, playerName(players[entry.player], t), entry.player === me, t)}
             </div>
           ))}
         </div>
@@ -149,7 +165,7 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
         <div className="actions">
           {groups.map((cards) => (
             <button key={cards.join()} type="button" className="btn primary" onClick={() => play(cards)}>
-              Положить {cards.length} {rankGroupName(view.hand.find((c) => c.id === cards[1])!.rank)}
+              {t.playGroup(cards.length, view.hand.find((c) => c.id === cards[1])!.rank)}
             </button>
           ))}
           <button
@@ -158,7 +174,7 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
             disabled={!canTake}
             onClick={() => session.move({ type: 'take' })}
           >
-            {canTake ? `Взять ${cardsWord(takeCount(view.pile))}` : 'Взять карты'}
+            {canTake ? t.take(takeCount(view.pile)) : t.takeCards}
           </button>
         </div>
         <div className="hand" style={{ '--gaps': Math.max(view.hand.length - 1, 1) } as React.CSSProperties}>
@@ -170,17 +186,17 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
               onClick={singles.has(card.id) ? () => play([card.id]) : undefined}
             />
           ))}
-          {view.hand.length === 0 && <span className="muted">У вас не осталось карт</span>}
+          {view.hand.length === 0 && <span className="muted">{t.noCardsLeft}</span>}
         </div>
       </section>
 
-      {!playing && <Result view={view} onNewDeal={() => session.newDeal()} onExit={onExit} />}
+      {!playing && <Result view={view} onNewDeal={newDeal} onExit={onExit} />}
       {notice && (
         <div className="overlay">
           <div className="panel">
             <h2>{notice}</h2>
             <button type="button" className="btn primary" onClick={onExit}>
-              В меню
+              {t.toMenu}
             </button>
           </div>
         </div>
@@ -222,21 +238,18 @@ function playViewSounds(before: PlayerView | null, view: PlayerView, tutorial: b
   }
 }
 
-function ordinal(place: number): string {
-  return ['первым', 'вторым', 'третьим', 'четвёртым', 'пятым'][place - 1] ?? `${place}-м`;
-}
-
 /** Буквы названия, набранные за проигранные раздачи: Y, YU, YUI. */
 function letters(losses: number): string {
   return GAME_TITLE.slice(0, losses);
 }
 
 function Opponent({ seat, player, active }: { seat: number; player: PlayerInfo; active: boolean }) {
+  const t = useT();
   const out = player.place !== null;
   return (
     <div className={`opponent ${active ? 'active' : ''} ${out ? 'out' : ''}`} data-seat={seat}>
       <div className="opp-name">
-        {player.name}
+        {playerName(player, t)}
         {player.losses > 0 && <span className="letters">{letters(player.losses)}</span>}
       </div>
       <div className="opp-cards">
@@ -244,16 +257,13 @@ function Opponent({ seat, player, active }: { seat: number; player: PlayerInfo; 
           <CardBack key={i} />
         ))}
       </div>
-      <div className="opp-count">
-        {out
-          ? `вышел ${ordinal(player.place!)}`
-          : `${player.count} ${plural(player.count, 'карта', 'карты', 'карт')}`}
-      </div>
+      <div className="opp-count">{out ? t.wentOut(player.place!) : t.cardsCount(player.count)}</div>
     </div>
   );
 }
 
 function Pile({ pile }: { pile: Card[] }) {
+  const t = useT();
   if (pile.length === 0) {
     return (
       <div className="pile">
@@ -269,7 +279,7 @@ function Pile({ pile }: { pile: Card[] }) {
     <div className="pile">
       <CardView card={base} />
       {hidden > 0 && (
-        <div className="card stack" title="Карты под верхними тремя">
+        <div className="card stack" title={t.hiddenPile}>
           +{hidden}
         </div>
       )}
@@ -291,16 +301,17 @@ function Result({
   onNewDeal: () => void;
   onExit: () => void;
 }) {
+  const t = useT();
   const me = view.seat;
   const myPlace = view.players[me].place;
   const matchOver = view.matchLoser !== null;
   let title: string;
-  if (view.matchLoser === me) title = `Вы собрали ${GAME_TITLE} — матч проигран`;
-  else if (view.matchLoser !== null) title = `${view.players[view.matchLoser].name} собирает ${GAME_TITLE} — матч окончен`;
-  else if (view.loser === null) title = 'Ничья — проигравшего нет';
-  else if (view.loser === me) title = 'Вы остались с картами';
-  else if (myPlace === 1) title = 'Победа!';
-  else title = `Вы вышли ${ordinal(myPlace ?? 1)}`;
+  if (view.matchLoser === me) title = t.resultMatchLostYou(GAME_TITLE);
+  else if (view.matchLoser !== null) title = t.resultMatchLost(playerName(view.players[view.matchLoser], t), GAME_TITLE);
+  else if (view.loser === null) title = t.resultDraw;
+  else if (view.loser === me) title = t.resultYouLost;
+  else if (myPlace === 1) title = t.resultWin;
+  else title = t.resultYouPlace(myPlace ?? 1);
 
   const order = view.players
     .map((player, seat) => ({ player, seat }))
@@ -313,16 +324,16 @@ function Result({
         <table>
           <thead>
             <tr>
-              <th>Игрок</th>
-              <th>Итог</th>
-              <th>Буквы</th>
+              <th>{t.colPlayer}</th>
+              <th>{t.colOutcome}</th>
+              <th>{t.colLetters}</th>
             </tr>
           </thead>
           <tbody>
             {order.map(({ player, seat }) => (
               <tr key={seat} className={seat === me ? 'you' : ''}>
-                <td>{seat === me ? `${player.name} (вы)` : player.name}</td>
-                <td>{player.place !== null ? `вышел ${ordinal(player.place)}` : 'остался с картами'}</td>
+                <td>{seat === me ? `${player.name} ${t.youSuffix}` : playerName(player, t)}</td>
+                <td>{player.place !== null ? t.wentOut(player.place) : t.leftWithCards}</td>
                 <td className="letters">{letters(player.losses) || '—'}</td>
               </tr>
             ))}
@@ -331,13 +342,13 @@ function Result({
         <div className="actions">
           {view.canRestart ? (
             <button type="button" className="btn primary" onClick={onNewDeal}>
-              {matchOver ? 'Новый матч' : 'Новая раздача'}
+              {matchOver ? t.newMatch : t.newDeal}
             </button>
           ) : (
-            <span className="muted">{matchOver ? 'Новый матч' : 'Новую раздачу'} начнёт хост</span>
+            <span className="muted">{matchOver ? t.ownerStartsMatch : t.ownerStartsDeal}</span>
           )}
           <button type="button" className="btn" onClick={onExit}>
-            В меню
+            {t.toMenu}
           </button>
         </div>
       </div>

@@ -3,8 +3,11 @@ import { BotLevel, chooseMove } from './bot';
 import { Card, GameState, LogEntry, Move, applyMove, deal } from './engine';
 
 export interface PlayerInfo {
+  /** у ботов — служебное имя вида «Bot 1», на экране его переводит botName() */
   name: string;
   isBot: boolean;
+  /** место человека, за которого временно играет бот: нет связи */
+  away: boolean;
   count: number;
   /** место, на котором игрок вышел из раздачи (1 — первый), иначе null */
   place: number | null;
@@ -65,6 +68,7 @@ export class HostSession implements Session {
   private dealNo = 1;
   private listeners = new Set<(view: PlayerView) => void>();
   private botTimer: ReturnType<typeof setTimeout> | null = null;
+  private paused = false;
   private readonly localSeat: number;
   private ownerSeat: number;
 
@@ -120,8 +124,14 @@ export class HostSession implements Session {
   detach(seat: number): void {
     const current = this.seats[seat];
     if (!current || current.kind !== 'remote') return;
-    this.seats[seat] = { name: `${current.name} (бот)`, kind: 'bot', human: current.name };
+    this.seats[seat] = { name: current.name, kind: 'bot', human: current.name };
     this.broadcast();
+  }
+
+  /** Пауза по просьбе площадки (реклама, свёрнутое окно): боты не ходят, пока она не снята. */
+  setPaused(paused: boolean): void {
+    this.paused = paused;
+    this.scheduleBot();
   }
 
   /** Отключившийся игрок вернулся и снова играет сам. */
@@ -164,6 +174,7 @@ export class HostSession implements Session {
       players: this.seats.map((s, i) => ({
         name: s.name,
         isBot: s.kind === 'bot',
+        away: s.human !== undefined,
         count: state.hands[i].length,
         place: state.finished.includes(i) ? state.finished.indexOf(i) + 1 : null,
         losses: this.losses[i],
@@ -196,7 +207,7 @@ export class HostSession implements Session {
     if (this.botTimer) clearTimeout(this.botTimer);
     this.botTimer = null;
     const { state } = this;
-    if (state.phase !== 'playing' || this.seats[state.turn].kind !== 'bot') return;
+    if (this.paused || state.phase !== 'playing' || this.seats[state.turn].kind !== 'bot') return;
     const seat = state.turn;
     this.botTimer = setTimeout(() => {
       this.botTimer = null;
@@ -204,4 +215,13 @@ export class HostSession implements Session {
       this.handleMove(seat, move);
     }, this.options.botDelayMs ?? 1000);
   }
+}
+
+/** Служебное имя бота: не зависит от языка, чтобы партию могли вести и сервер, и чужой браузер. */
+export const botSeatName = (n: number): string => `Bot ${n}`;
+
+/** Номер бота по служебному имени или null, если это имя игрока. */
+export function botNumber(player: PlayerInfo): number | null {
+  const match = player.isBot && !player.away ? /^Bot (\d+)$/.exec(player.name) : null;
+  return match ? Number(match[1]) : null;
 }

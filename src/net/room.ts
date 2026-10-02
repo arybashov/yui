@@ -1,7 +1,8 @@
 import Peer, { DataConnection } from 'peerjs';
 import { BotLevel } from '../game/bot';
 import { MAX_PLAYERS, Move } from '../game/engine';
-import { HostSeat, HostSession, PlayerView, Session } from '../game/session';
+import { HostSeat, HostSession, PlayerView, Session, botSeatName } from '../game/session';
+import { NetError } from '../i18n/types';
 import { Store } from '../store';
 import { makeRoomCode } from './protocol';
 
@@ -14,7 +15,7 @@ const CONNECT_TIMEOUT_MS = 15000;
 type HostMessage =
   | { t: 'lobby'; names: string[]; you: number }
   | { t: 'view'; view: PlayerView }
-  | { t: 'reject'; reason: string };
+  | { t: 'reject'; reason: NetError };
 
 type GuestMessage = { t: 'hello'; name: string } | { t: 'move'; move: Move };
 
@@ -22,7 +23,7 @@ export interface HostRoomState {
   status: 'opening' | 'open' | 'error';
   code: string;
   guests: string[];
-  error?: string;
+  error?: NetError;
 }
 
 export class HostRoom {
@@ -55,17 +56,17 @@ export class HostRoom {
       }
       // ошибки отдельных соединений комнату не закрывают
       if (this.state.get().status === 'opening') {
-        this.state.set({ status: 'error', error: 'Не удалось создать комнату. Проверьте интернет.' });
+        this.state.set({ status: 'error', error: 'cant-create' });
       }
     });
   }
 
   private onMessage(conn: DataConnection, message: GuestMessage): void {
     if (message.t === 'hello') {
-      if (this.session) return this.reject(conn, 'Игра уже идёт');
-      if (this.guests.length >= MAX_PLAYERS - 1) return this.reject(conn, 'Комната заполнена');
+      if (this.session) return this.reject(conn, 'game-started');
+      if (this.guests.length >= MAX_PLAYERS - 1) return this.reject(conn, 'room-full');
       if (this.guests.some((g) => g.conn === conn)) return;
-      const name = String(message.name).trim().slice(0, 16) || 'Гость';
+      const name = String(message.name).trim().slice(0, 16) || 'Player';
       this.guests.push({ name, conn });
       this.syncLobby();
     } else if (message.t === 'move' && this.session) {
@@ -74,7 +75,7 @@ export class HostRoom {
     }
   }
 
-  private reject(conn: DataConnection, reason: string): void {
+  private reject(conn: DataConnection, reason: NetError): void {
     conn.send({ t: 'reject', reason } satisfies HostMessage);
   }
 
@@ -108,7 +109,7 @@ export class HostRoom {
           send: (view) => g.conn.send({ t: 'view', view } satisfies HostMessage),
         }),
       ),
-      ...Array.from({ length: botCount }, (_, i): HostSeat => ({ name: `Бот ${i + 1}`, kind: 'bot' })),
+      ...Array.from({ length: botCount }, (_, i): HostSeat => ({ name: botSeatName(i + 1), kind: 'bot' })),
     ];
     this.session = new HostSession(seats, { botLevel });
     this.session.start();
@@ -127,7 +128,7 @@ export interface GuestState {
   status: 'connecting' | 'lobby' | 'game' | 'error' | 'closed';
   names: string[];
   you: number;
-  error?: string;
+  error?: NetError;
 }
 
 export class GuestClient implements Session {
@@ -141,7 +142,7 @@ export class GuestClient implements Session {
   constructor(code: string, name: string) {
     this.peer = new Peer();
     this.timeout = setTimeout(() => {
-      if (this.state.get().status === 'connecting') this.fail('Не удалось подключиться к комнате');
+      if (this.state.get().status === 'connecting') this.fail('cant-connect');
     }, CONNECT_TIMEOUT_MS);
 
     this.peer.on('open', () => {
@@ -154,11 +155,11 @@ export class GuestClient implements Session {
       });
     });
     this.peer.on('error', (err) => {
-      this.fail(err.type === 'peer-unavailable' ? 'Комната не найдена' : 'Ошибка соединения');
+      this.fail(err.type === 'peer-unavailable' ? 'room-not-found' : 'connection-error');
     });
   }
 
-  private fail(error: string): void {
+  private fail(error: NetError): void {
     const { status } = this.state.get();
     if (status === 'error' || status === 'closed') return;
     // во время партии показываем обрыв связи, а не экран ошибки входа

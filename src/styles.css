@@ -27,11 +27,32 @@ body,
   margin: 0;
 }
 
+/* Окно браузера не прокручивается и не тянется «резинкой»; длинные экраны
+   прокручиваются внутри игры. */
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#root {
+  overflow-y: auto;
+}
+
 body {
   background:
     radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0, 0, 0, 0.45) 100%) fixed,
     var(--wood-dark) url('/table.webp') center / cover fixed;
   -webkit-tap-highlight-color: transparent;
+  /* долгое нажатие не должно выделять текст и открывать меню браузера */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 h1,

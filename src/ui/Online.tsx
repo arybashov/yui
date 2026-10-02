@@ -2,14 +2,12 @@ import { useEffect, useState } from 'react';
 import { BotLevel } from '../game/bot';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../game/engine';
 import { Session } from '../game/session';
+import { useT } from '../i18n';
 import { OnlineRoom, OnlineState } from '../net/online';
 import { GuestClient, GuestState, HostRoom, HostRoomState } from '../net/room';
-import { BOT_LEVELS } from './Menu';
+import { inviteLink } from '../platform/yandex';
+import { botLevels } from './Menu';
 import { Table } from './Table';
-
-function roomLink(code: string): string {
-  return `${location.origin}${location.pathname}?room=${code}`;
-}
 
 interface LobbyProps {
   code: string;
@@ -21,6 +19,7 @@ interface LobbyProps {
 }
 
 function Lobby({ code, names, you, onStart, hint }: LobbyProps) {
+  const t = useT();
   const [bots, setBots] = useState(0);
   const [level, setLevel] = useState<BotLevel>('normal');
   const [copied, setCopied] = useState(false);
@@ -31,7 +30,7 @@ function Lobby({ code, names, you, onStart, hint }: LobbyProps) {
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(roomLink(code));
+      await navigator.clipboard.writeText(inviteLink(code));
       setCopied(true);
     } catch {
       setCopied(false);
@@ -41,31 +40,31 @@ function Lobby({ code, names, you, onStart, hint }: LobbyProps) {
   return (
     <>
       <div className="panel">
-        <span className="muted">Код комнаты</span>
+        <span className="muted">{t.roomCode}</span>
         <div className="room-code">{code}</div>
         <button type="button" className="btn wide" onClick={copy}>
-          {copied ? 'Ссылка скопирована' : 'Скопировать ссылку'}
+          {copied ? t.linkCopied : t.copyLink}
         </button>
         {hint && <p className="muted hint">{hint}</p>}
       </div>
 
       <div className="panel">
-        <h2>Игроки</h2>
+        <h2>{t.players}</h2>
         <ul className="players">
           {names.map((name, i) => (
-            <li key={i}>{i === you ? `${name} (вы)` : name}</li>
+            <li key={i}>{i === you ? `${name} ${t.youSuffix}` : name}</li>
           ))}
           {onStart &&
             Array.from({ length: botCount }, (_, i) => (
               <li key={`bot${i}`} className="muted">
-                Бот {i + 1}
+                {t.bot(i + 1)}
               </li>
             ))}
         </ul>
         {onStart ? (
           <>
             <div className="field">
-              <span>Добавить ботов</span>
+              <span>{t.addBots}</span>
               <div className="segmented">
                 {Array.from({ length: maxBots + 1 }, (_, n) => (
                   <button
@@ -82,9 +81,9 @@ function Lobby({ code, names, you, onStart, hint }: LobbyProps) {
             </div>
             {botCount > 0 && (
               <div className="field">
-                <span>Боты</span>
+                <span>{t.bots}</span>
                 <div className="segmented">
-                  {BOT_LEVELS.map((l) => (
+                  {botLevels(t).map((l) => (
                     <button
                       key={l.id}
                       type="button"
@@ -104,11 +103,11 @@ function Lobby({ code, names, you, onStart, hint }: LobbyProps) {
               disabled={total < MIN_PLAYERS}
               onClick={() => onStart(botCount, level)}
             >
-              {total < MIN_PLAYERS ? 'Ждём игроков…' : `Начать игру (${total})`}
+              {total < MIN_PLAYERS ? t.waitingPlayers : t.startGame(total)}
             </button>
           </>
         ) : (
-          <p className="muted hint">Ждём, пока создатель комнаты начнёт игру…</p>
+          <p className="muted hint">{t.waitingOwner}</p>
         )}
       </div>
     </>
@@ -116,12 +115,13 @@ function Lobby({ code, names, you, onStart, hint }: LobbyProps) {
 }
 
 function RoomFrame({ children, onExit }: { children: React.ReactNode; onExit: () => void }) {
+  const t = useT();
   return (
     <div className="screen">
-      <h1 className="title small">Комната</h1>
+      <h1 className="title small">{t.room}</h1>
       {children}
       <button type="button" className="btn ghost" onClick={onExit}>
-        Назад
+        {t.back}
       </button>
     </div>
   );
@@ -129,6 +129,7 @@ function RoomFrame({ children, onExit }: { children: React.ReactNode; onExit: ()
 
 /** Комната на игровом сервере. */
 export function OnlineScreen({ room, onExit }: { room: OnlineRoom; onExit: () => void }) {
+  const t = useT();
   const [state, setState] = useState<OnlineState>(room.state.get());
   const [started, setStarted] = useState(false);
 
@@ -141,24 +142,26 @@ export function OnlineScreen({ room, onExit }: { room: OnlineRoom; onExit: () =>
     [room],
   );
 
+  const error = t.netErrors[state.error ?? 'lost-server'];
+
   if (started) {
     let notice: string | undefined;
-    if (state.status === 'reconnecting') notice = 'Восстанавливаем связь…';
-    if (state.status === 'closed') notice = state.error ?? 'Связь с сервером потеряна';
+    if (state.status === 'reconnecting') notice = t.reconnecting;
+    if (state.status === 'closed') notice = error;
     return <Table session={room} onExit={onExit} notice={notice} />;
   }
 
   return (
     <RoomFrame onExit={onExit}>
-      {state.status === 'connecting' && <p className="muted">Подключаемся…</p>}
-      {(state.status === 'error' || state.status === 'closed') && <p className="error">{state.error}</p>}
+      {state.status === 'connecting' && <p className="muted">{t.connecting}</p>}
+      {(state.status === 'error' || state.status === 'closed') && <p className="error">{error}</p>}
       {state.status === 'lobby' && (
         <Lobby
           code={state.code}
           names={state.names}
           you={state.you}
           onStart={state.you === state.owner ? (bots, level) => room.start(bots, level) : undefined}
-          hint="Отправьте друзьям ссылку или код."
+          hint={t.shareHint}
         />
       )}
     </RoomFrame>
@@ -167,6 +170,7 @@ export function OnlineScreen({ room, onExit }: { room: OnlineRoom; onExit: () =>
 
 /** Комната без сервера: партию ведёт вкладка создателя. */
 export function HostScreen({ room, hostName, onExit }: { room: HostRoom; hostName: string; onExit: () => void }) {
+  const t = useT();
   const [state, setState] = useState<HostRoomState>(room.state.get());
   const [session, setSession] = useState<Session | null>(null);
 
@@ -176,15 +180,15 @@ export function HostScreen({ room, hostName, onExit }: { room: HostRoom; hostNam
 
   return (
     <RoomFrame onExit={onExit}>
-      {state.status === 'opening' && <p className="muted">Создаём комнату…</p>}
-      {state.status === 'error' && <p className="error">{state.error}</p>}
+      {state.status === 'opening' && <p className="muted">{t.creatingRoom}</p>}
+      {state.status === 'error' && <p className="error">{t.netErrors[state.error ?? 'cant-create']}</p>}
       {state.status === 'open' && (
         <Lobby
           code={state.code}
           names={[hostName, ...state.guests]}
           you={0}
           onStart={(bots, level) => setSession(room.startGame(bots, level))}
-          hint="Отправьте друзьям ссылку или код. Не закрывайте эту вкладку — игру ведёт она."
+          hint={t.shareHintHost}
         />
       )}
     </RoomFrame>
@@ -192,6 +196,7 @@ export function HostScreen({ room, hostName, onExit }: { room: HostRoom; hostNam
 }
 
 export function GuestScreen({ client, code, onExit }: { client: GuestClient; code: string; onExit: () => void }) {
+  const t = useT();
   const [state, setState] = useState<GuestState>(client.state.get());
   const [started, setStarted] = useState(false);
 
@@ -209,16 +214,16 @@ export function GuestScreen({ client, code, onExit }: { client: GuestClient; cod
       <Table
         session={client}
         onExit={onExit}
-        notice={state.status === 'closed' ? 'Связь с хостом потеряна' : undefined}
+        notice={state.status === 'closed' ? t.netErrors['lost-host'] : undefined}
       />
     );
   }
 
   return (
     <RoomFrame onExit={onExit}>
-      {state.status === 'connecting' && <p className="muted">Подключаемся…</p>}
-      {state.status === 'error' && <p className="error">{state.error}</p>}
-      {state.status === 'closed' && <p className="error">Хост закрыл комнату</p>}
+      {state.status === 'connecting' && <p className="muted">{t.connecting}</p>}
+      {state.status === 'error' && <p className="error">{t.netErrors[state.error ?? 'connection-error']}</p>}
+      {state.status === 'closed' && <p className="error">{t.netErrors['host-closed']}</p>}
       {state.status === 'lobby' && <Lobby code={code} names={state.names} you={state.you} />}
     </RoomFrame>
   );
