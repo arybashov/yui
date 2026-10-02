@@ -1,0 +1,572 @@
+:root {
+  --wood-dark: #24150c;
+  --panel: rgba(22, 11, 5, 0.66);
+  --panel-solid: #2e1c10;
+  --line: rgba(255, 222, 170, 0.2);
+  --text: #f7ecd9;
+  --muted: #d0b898;
+  --gold: #f2c14e;
+  --gold-ink: #2a1e00;
+  --danger: #ffb4a8;
+  --cw: clamp(46px, 11.5vw, 84px);
+  /* пропорция нарисованных карт, см. art/slice.py */
+  --ch: calc(var(--cw) * 1.785);
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  color: var(--text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 50% 40%, transparent 30%, rgba(0, 0, 0, 0.55) 100%) fixed,
+    var(--wood-dark) url('/table.webp') center / cover fixed;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ---------- экраны меню и комнаты ---------- */
+
+.screen {
+  min-height: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 28px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+}
+
+.title {
+  font-size: clamp(2.6rem, 12vw, 4rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--gold);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+}
+
+.title.small {
+  font-size: 2rem;
+}
+
+.subtitle {
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  backdrop-filter: blur(6px);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.field > span {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+input {
+  font: inherit;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+}
+
+.btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btn.primary {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--gold-ink);
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: #ffd469;
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  padding: 8px 12px;
+}
+
+.btn.icon {
+  display: grid;
+  place-items: center;
+  padding: 6px 8px;
+}
+
+.btn.icon[aria-pressed='false'] {
+  opacity: 0.6;
+}
+
+.menu-sound {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btn.wide {
+  width: 100%;
+}
+
+.segmented {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.segmented button {
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  padding: 8px 14px;
+  min-width: 42px;
+  cursor: pointer;
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--line);
+}
+
+.segmented button.on {
+  background: var(--gold);
+  color: var(--gold-ink);
+  font-weight: 700;
+}
+
+.join {
+  display: flex;
+  gap: 8px;
+}
+
+.join input {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.room-code {
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-align: center;
+  color: var(--gold);
+  user-select: all;
+}
+
+.hint {
+  font-size: 0.88rem;
+}
+
+.players {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.players li {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* ---------- карты ---------- */
+
+/* Карты — картинки с неровными обожжёнными краями, поэтому тень и подсветка
+   делаются через drop-shadow, а не через рамку. */
+.card {
+  position: relative;
+  flex: none;
+  width: var(--cw);
+  height: var(--ch);
+  padding: 0;
+  border: 0;
+  background: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+  user-select: none;
+  transition:
+    transform 0.15s,
+    filter 0.15s;
+}
+
+.card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.card.clickable {
+  cursor: pointer;
+}
+
+.card.clickable:hover,
+.card.clickable:focus-visible {
+  outline: none;
+  transform: translateY(calc(var(--ch) * -0.1));
+  filter: drop-shadow(0 0 5px var(--gold)) drop-shadow(0 8px 8px rgba(0, 0, 0, 0.5));
+}
+
+.card.dimmed {
+  filter: brightness(0.5) saturate(0.7) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+}
+
+.card.slot,
+.card.stack {
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.25);
+  border: 2px dashed var(--line);
+  border-radius: calc(var(--cw) * 0.1);
+  filter: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: calc(var(--cw) * 0.3);
+}
+
+.card.stack {
+  border-style: solid;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---------- стол ---------- */
+
+.table {
+  height: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 8px 12px calc(12px + env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 10px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--gold);
+}
+
+.opponents {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.opponent {
+  --cw: clamp(20px, 4.4vw, 30px);
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 230px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.2s;
+}
+
+.opponent.active {
+  border-color: var(--gold);
+}
+
+.opponent.out {
+  opacity: 0.6;
+}
+
+.opp-name {
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.letters {
+  margin-left: 6px;
+  color: var(--gold);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.opp-cards {
+  display: flex;
+  justify-content: center;
+  min-height: var(--ch);
+}
+
+.opp-cards .card + .card {
+  margin-left: calc(var(--cw) * -0.62);
+}
+
+.opp-count {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 0;
+}
+
+.pile {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--cw) * 0.14);
+}
+
+.pile-top {
+  display: flex;
+}
+
+.pile-top .card + .card {
+  margin-left: calc(var(--cw) * -0.5);
+}
+
+.pile-top .card {
+  animation: drop 0.22s ease-out;
+}
+
+@keyframes drop {
+  from {
+    transform: translateY(-18px) scale(1.08);
+    opacity: 0;
+  }
+}
+
+.coach {
+  max-width: 520px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--gold);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.done-mark {
+  font-size: 3rem;
+  text-align: center;
+  color: var(--gold);
+}
+
+.log {
+  min-height: 3.9em;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.log-old {
+  color: var(--muted);
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.me {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.status {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--panel);
+  text-align: center;
+}
+
+.status.your-turn {
+  background: var(--gold);
+  color: var(--gold-ink);
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.hand {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(var(--ch) * 1.2);
+  padding-top: calc(var(--ch) * 0.2);
+}
+
+/* карты наезжают друг на друга ровно настолько, чтобы рука влезла в ширину экрана */
+.hand .card + .card {
+  margin-left: calc(min(var(--cw) + 6px, (100% - var(--cw)) / var(--gaps)) - var(--cw));
+}
+
+/* ---------- окна поверх стола ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 10;
+}
+
+.overlay .panel {
+  width: min(460px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  background: var(--panel-solid);
+}
+
+.rules ul {
+  margin: 0;
+  padding-left: 1.2em;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.result table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.result th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.result th,
+.result td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.result th:last-child,
+.result td:last-child {
+  text-align: right;
+}
+
+.result tr.you td {
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

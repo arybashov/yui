@@ -1,0 +1,15 @@
+Use your built-in image generation tool (do not write code to draw, do not draw SVG, do not use any MCP server) to create ONE image and save it as art/raw/jacks.png inside the current directory.
+
+STYLE (must be followed exactly):
+- One image, landscape, about 1536x1024.
+- Exactly FOUR playing cards laid side by side in a single horizontal row, with clear empty gaps between them and a margin around them. Cards are upright (portrait), all the same size, fully visible, flat top-down view, not rotated, not overlapping.
+- Background: perfectly flat solid pure bright green #00FF00 everywhere (chroma key). No shadows, no gradients, no texture on the background.
+- Semi-cartoon hand-painted 2D game art style: bold dark ink outlines, simplified shapes, soft painterly shading.
+- The cards are old and artificially aged: yellowed stained parchment paper, scorched and burnt irregular edges, charred corners, a few small burn holes close to the edges, soot smudges, creases. The burnt damage stays near the edges: the corner indices and the center artwork remain fully intact and clearly readable.
+- Spades and clubs are painted in dark charcoal black. Hearts and diamonds are painted in deep faded red.
+- Each card has a corner index in the top-left corner and the same index rotated 180 degrees in the bottom-right corner: the rank on top and a small suit symbol under it. Indices are large and bold.
+- No green color anywhere on the cards. No extra text, no watermark, no logos.
+
+CONTENT: four JACK cards, left to right: Jack of Spades, Jack of Hearts, Jack of Diamonds, Jack of Clubs. The rank in the corner index is the single capital letter J. The center of each card shows a semi-cartoon young jack / knave character (bust, feathered cap, mischievous look), each jack a little different, with one large suit symbol of that card's suit next to him.
+
+When the file is saved, reply with just the saved path and the image pixel size.

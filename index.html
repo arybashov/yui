@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#24150c" />
+    <title>YUI</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Файл открыт прямо с диска: без сервера игра не загрузится, и страница была бы пустой.
+      if (location.protocol === 'file:') {
+        document.body.style.cssText =
+          'margin:0;min-height:100vh;display:grid;place-items:center;background:#24150c;color:#f7ecd9;font-family:Segoe UI,system-ui,sans-serif';
+        document.getElementById('root').innerHTML =
+          '<div style="max-width:440px;padding:24px;text-align:center;line-height:1.5">' +
+          '<h1 style="color:#f2c14e;margin:0 0 12px">YUI</h1>' +
+          '<p>Игра не открывается как файл. Запустите <b>start.bat</b> в папке игры — ' +
+          'он включит сервер и откроет игру в браузере.</p>' +
+          '<p>Если сервер уже запущен, откройте адрес<br><b>http://localhost:5173</b></p></div>';
+      }
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

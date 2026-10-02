@@ -1,0 +1,11 @@
+Use your built-in image generation tool (do not write code to draw, do not draw SVG, do not use any MCP server) to create ONE image and save it as art/raw/back.png inside the current directory.
+
+One image, portrait or landscape, about 1024x1536 or 1536x1024.
+- Exactly ONE playing card seen from its BACK side, upright (portrait), centered, fully visible, flat top-down view, not rotated, with a margin around it.
+- Background: perfectly flat solid pure bright green #00FF00 everywhere (chroma key). No shadows, no gradients, no texture on the background.
+- Semi-cartoon hand-painted 2D game art style: bold dark ink outlines, simplified shapes, soft painterly shading.
+- The card back has a symmetrical ornamental pattern in dark wine red and faded gold with a simple emblem in the middle and a thin border frame.
+- The card is old and artificially aged: stained, faded, scorched and burnt irregular edges, charred corners, a couple of small burn holes close to the edges, soot smudges, creases.
+- No green color anywhere on the card. No text, no letters, no watermark.
+
+When the file is saved, reply with just the saved path and the image pixel size.

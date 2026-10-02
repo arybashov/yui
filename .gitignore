@@ -1,0 +1,11 @@
+node_modules
+dist
+*.local
+.~lock.*
+
+# личные настройки и исходный документ с правилами в публичный репозиторий не идут
+.claude/settings.local.json
+Doc/
+
+# журналы генерации арта
+art/logs/

@@ -1,0 +1,177 @@
+import { GAME_TITLE } from '../config';
+import { BotLevel, chooseMove } from './bot';
+import { Card, GameState, LogEntry, Move, applyMove, deal } from './engine';
+
+export interface PlayerInfo {
+  name: string;
+  isBot: boolean;
+  count: number;
+  /** место, на котором игрок вышел из раздачи (1 — первый), иначе null */
+  place: number | null;
+  /** проигранные раздачи в текущем матче: за каждую игрок получает букву названия */
+  losses: number;
+}
+
+/** То, что видит один игрок: чужие руки — только количеством карт. */
+export interface PlayerView {
+  seat: number;
+  players: PlayerInfo[];
+  hand: Card[];
+  pile: Card[];
+  turn: number;
+  phase: 'playing' | 'over';
+  loser: number | null;
+  log: LogEntry[];
+  /** сколько ходов сделано в раздаче; log хранит только последние */
+  moveNo: number;
+  dealNo: number;
+  /** кто собрал все буквы и проиграл матч; следующая раздача начнёт новый матч */
+  matchLoser: number | null;
+  canRestart: boolean;
+}
+
+export interface Session {
+  subscribe(listener: (view: PlayerView) => void): () => void;
+  move(move: Move): void;
+  newDeal(): void;
+  leave(): void;
+}
+
+export interface HostSeat {
+  name: string;
+  kind: 'local' | 'bot' | 'remote';
+  /** для удалённого игрока — отправка его вида по сети */
+  send?: (view: PlayerView) => void;
+}
+
+export interface HostOptions {
+  botLevel: BotLevel;
+  botDelayMs?: number;
+  onLeave?: () => void;
+}
+
+const LOG_TAIL = 6;
+export const LOSSES_TO_LOSE_MATCH = GAME_TITLE.length;
+
+/** Ведёт партию: и локальную с ботами, и сетевую на стороне хоста. */
+export class HostSession implements Session {
+  private state: GameState;
+  private losses: number[];
+  private dealNo = 1;
+  private listeners = new Set<(view: PlayerView) => void>();
+  private botTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly localSeat: number;
+
+  constructor(
+    private seats: HostSeat[],
+    private options: HostOptions,
+  ) {
+    this.localSeat = seats.findIndex((s) => s.kind === 'local');
+    this.losses = seats.map(() => 0);
+    this.state = deal(seats.length);
+  }
+
+  start(): void {
+    this.broadcast();
+  }
+
+  subscribe(listener: (view: PlayerView) => void): () => void {
+    this.listeners.add(listener);
+    listener(this.viewFor(this.localSeat));
+    return () => this.listeners.delete(listener);
+  }
+
+  move(move: Move): void {
+    this.handleMove(this.localSeat, move);
+  }
+
+  handleMove(seat: number, move: Move): void {
+    if (this.state.phase !== 'playing' || this.state.turn !== seat) return;
+    try {
+      this.state = applyMove(this.state, move);
+    } catch {
+      return;
+    }
+    if (this.state.phase === 'over' && this.state.loser !== null) {
+      this.losses[this.state.loser]++;
+    }
+    this.broadcast();
+  }
+
+  newDeal(): void {
+    if (this.state.phase !== 'over') return;
+    if (this.matchLoser() !== null) {
+      this.losses = this.seats.map(() => 0);
+      this.dealNo = 0;
+    }
+    this.state = deal(this.seats.length);
+    this.dealNo++;
+    this.broadcast();
+  }
+
+  /** Игрок отключился — за него доигрывает бот. */
+  detach(seat: number): void {
+    const current = this.seats[seat];
+    if (!current || current.kind !== 'remote') return;
+    this.seats[seat] = { name: `${current.name} (бот)`, kind: 'bot' };
+    this.broadcast();
+  }
+
+  leave(): void {
+    if (this.botTimer) clearTimeout(this.botTimer);
+    this.botTimer = null;
+    this.listeners.clear();
+    this.options.onLeave?.();
+  }
+
+  private matchLoser(): number | null {
+    const seat = this.losses.findIndex((n) => n >= LOSSES_TO_LOSE_MATCH);
+    return seat >= 0 ? seat : null;
+  }
+
+  private viewFor(seat: number): PlayerView {
+    const { state } = this;
+    return {
+      seat,
+      players: this.seats.map((s, i) => ({
+        name: s.name,
+        isBot: s.kind === 'bot',
+        count: state.hands[i].length,
+        place: state.finished.includes(i) ? state.finished.indexOf(i) + 1 : null,
+        losses: this.losses[i],
+      })),
+      hand: state.hands[seat],
+      pile: state.pile,
+      turn: state.turn,
+      phase: state.phase,
+      loser: state.loser,
+      log: state.log.slice(-LOG_TAIL),
+      moveNo: state.log.length,
+      dealNo: this.dealNo,
+      matchLoser: this.state.phase === 'over' ? this.matchLoser() : null,
+      canRestart: seat === this.localSeat,
+    };
+  }
+
+  private broadcast(): void {
+    this.seats.forEach((seat, i) => {
+      if (seat.kind === 'remote') seat.send?.(this.viewFor(i));
+    });
+    const local = this.viewFor(this.localSeat);
+    this.listeners.forEach((listener) => listener(local));
+    this.scheduleBot();
+  }
+
+  private scheduleBot(): void {
+    if (this.botTimer) clearTimeout(this.botTimer);
+    this.botTimer = null;
+    const { state } = this;
+    if (state.phase !== 'playing' || this.seats[state.turn].kind !== 'bot') return;
+    const seat = state.turn;
+    this.botTimer = setTimeout(() => {
+      this.botTimer = null;
+      const move = chooseMove(state.hands[seat], state.pile, this.options.botLevel);
+      this.handleMove(seat, move);
+    }, this.options.botDelayMs ?? 1000);
+  }
+}
