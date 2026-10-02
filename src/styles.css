@@ -28,7 +28,7 @@ body,
 
 body {
   background:
-    radial-gradient(ellipse at 50% 40%, transparent 30%, rgba(0, 0, 0, 0.55) 100%) fixed,
+    radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0, 0, 0, 0.45) 100%) fixed,
     var(--wood-dark) url('/table.webp') center / cover fixed;
   -webkit-tap-highlight-color: transparent;
 }

@@ -1,0 +1,11 @@
+Use your built-in image generation tool (do not write code to draw, do not draw SVG, do not use any MCP server) to create ONE image and save it as art/raw/table.png inside the current directory (overwrite the existing file).
+
+Image: top-down view of a stylish card-game table, used as the background of a card game. Semi-cartoon hand-painted 2D game art style: bold shapes, dark ink outlines, soft painterly shading, the same mood as old burnt parchment playing cards in a tavern.
+- The tabletop is ONE solid surface of rich dark polished wood with fine grain and a few scratches and scorch marks. It must NOT look like separate planks or floorboards: no plank seams, no gaps between boards.
+- In the exact center there is a large round inlaid medallion, its diameter about 60% of the image height: an ornate ring of aged brass and carved wood ornament around a calm circular field of worn dark burgundy leather. The inside of the circle is quiet and evenly lit, with only very subtle texture, so playing cards placed on it stay readable.
+- Around the medallion: subtle decorative marquetry lines and small corner ornaments, getting darker toward the edges (vignette).
+- Perfectly symmetrical and centered composition, flat top-down view, even lighting.
+- No cards, no chips, no objects, no hands, no text, no letters.
+- Landscape orientation, about 1536x1024.
+
+When the file is saved, reply with just the saved path and the image pixel size.
