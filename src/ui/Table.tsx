@@ -98,10 +98,16 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
         )}
         <span className="spacer" />
         <SoundToggle />
-        <button type="button" className="btn ghost" onClick={() => setShowRules(true)}>
-          Правила
+        <button
+          type="button"
+          className="btn icon"
+          aria-label="Правила"
+          title="Правила"
+          onClick={() => setShowRules(true)}
+        >
+          ?
         </button>
-        <button type="button" className="btn ghost" onClick={onExit}>
+        <button type="button" className="btn small" onClick={onExit}>
           Выйти
         </button>
       </header>

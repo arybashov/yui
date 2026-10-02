@@ -1,26 +1,43 @@
 import { useEffect, useState } from 'react';
 import { playSound, setSoundEnabled, soundSetting } from './sound';
 
-export function SoundToggle() {
+function useSoundEnabled(): [boolean, (enabled: boolean) => void] {
   const [enabled, setEnabled] = useState(soundSetting.get().enabled);
 
   useEffect(() => soundSetting.subscribe((setting) => setEnabled(setting.enabled)), []);
 
+  const change = (next: boolean) => {
+    setSoundEnabled(next);
+    // короткий звук подтверждает, что включилось
+    playSound('card');
+  };
+  return [enabled, change];
+}
+
+/** Круглая кнопка со значком динамика — для верхней панели стола. */
+export function SoundToggle() {
+  const [enabled, change] = useSoundEnabled();
   const label = enabled ? 'Выключить звук' : 'Включить звук';
   return (
     <button
       type="button"
-      className="btn ghost icon"
+      className="btn icon"
       aria-label={label}
       title={label}
       aria-pressed={enabled}
-      onClick={() => {
-        setSoundEnabled(!enabled);
-        // короткий звук подтверждает, что включилось
-        playSound('card');
-      }}
+      onClick={() => change(!enabled)}
     >
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        width="22"
+        height="22"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
         <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" stroke="none" />
         {enabled ? (
           <>
@@ -35,5 +52,23 @@ export function SoundToggle() {
         )}
       </svg>
     </button>
+  );
+}
+
+/** Подписанный переключатель «Вкл / Выкл» — для меню. */
+export function SoundSwitch() {
+  const [enabled, change] = useSoundEnabled();
+  return (
+    <div className="field">
+      <span>Звук</span>
+      <div className="segmented">
+        <button type="button" className={enabled ? 'on' : ''} aria-pressed={enabled} onClick={() => change(true)}>
+          Вкл
+        </button>
+        <button type="button" className={enabled ? '' : 'on'} aria-pressed={!enabled} onClick={() => change(false)}>
+          Выкл
+        </button>
+      </div>
+    </div>
   );
 }

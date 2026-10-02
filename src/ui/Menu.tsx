@@ -4,7 +4,7 @@ import { BotLevel } from '../game/bot';
 import { MAX_PLAYERS } from '../game/engine';
 import { normalizeRoomCode } from '../net/protocol';
 import { Rules } from './Rules';
-import { SoundToggle } from './SoundToggle';
+import { SoundSwitch } from './SoundToggle';
 
 interface MenuProps {
   name: string;
@@ -50,6 +50,7 @@ export function Menu({
             onChange={(e) => onNameChange(e.target.value)}
           />
         </label>
+        <SoundSwitch />
       </div>
 
       <div className="panel">
@@ -127,10 +128,6 @@ export function Menu({
         </button>
       </div>
 
-      <div className="menu-sound">
-        <span className="muted">Звук</span>
-        <SoundToggle />
-      </div>
       {showRules && <Rules onClose={() => setShowRules(false)} />}
     </div>
   );

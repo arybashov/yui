@@ -1,18 +1,19 @@
 :root {
   --wood-dark: #24150c;
-  --panel: rgba(22, 11, 5, 0.66);
-  --panel-solid: #2e1c10;
-  --line: rgba(255, 222, 170, 0.2);
-  --text: #f7ecd9;
-  --muted: #d0b898;
-  --gold: #f2c14e;
-  --gold-ink: #2a1e00;
+  --ink: #2a1408;
+  --cream: #fbeed0;
+  --muted: #dcc4a0;
+  --gold: #f6c955;
+  --brass: #8a6427;
+  --brass-dark: #6b430f;
+  --wood-edge: #1d0f06;
   --danger: #ffb4a8;
   --cw: clamp(46px, 11.5vw, 84px);
   /* пропорция нарисованных карт, см. art/slice.py */
   --card-ratio: 1.785;
-  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
-  color: var(--text);
+  font-family: 'Balsamiq Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 17px;
+  color: var(--cream);
 }
 
 * {
@@ -40,12 +41,31 @@ p {
 }
 
 h2 {
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* Буквы с тёмной обводкой, как в играх: читаются и на дереве, и на коже стола.
+   paint-order кладёт обводку под заливку, иначе она съедала бы саму букву. */
+.title,
+.brand,
+.btn,
+.segmented button,
+.panel h2,
+.room-code,
+.opp-name,
+.status,
+.log-last,
+.letters,
+.card.slot,
+.card.stack {
+  -webkit-text-stroke: 0.2em var(--ink);
+  paint-order: stroke fill;
 }
 
 .muted {
   color: var(--muted);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .error {
@@ -70,16 +90,18 @@ h2 {
 }
 
 .title {
-  font-size: clamp(2.6rem, 12vw, 4rem);
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-size: clamp(3rem, 14vw, 4.6rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
   text-align: center;
   color: var(--gold);
-  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  -webkit-text-stroke-width: 0.16em;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.45));
 }
 
 .title.small {
-  font-size: 2rem;
+  font-size: 2.2rem;
 }
 
 .subtitle {
@@ -87,15 +109,19 @@ h2 {
   margin-bottom: 6px;
 }
 
+/* Панель — тёмная кожа в латунной рамке, как вставка на столе */
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: linear-gradient(rgba(64, 31, 20, 0.94), rgba(34, 15, 9, 0.96));
+  border: 2px solid var(--brass);
   border-radius: 16px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  backdrop-filter: blur(6px);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    inset 0 2px 0 1px rgba(255, 220, 150, 0.1),
+    0 8px 20px rgba(0, 0, 0, 0.45);
 }
 
 .field {
@@ -112,13 +138,18 @@ h2 {
 
 input {
   font: inherit;
-  color: var(--text);
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid var(--line);
+  color: var(--cream);
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(138, 100, 39, 0.6);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   min-width: 0;
   flex: 1;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+input::placeholder {
+  color: rgba(220, 196, 160, 0.55);
 }
 
 input:focus-visible,
@@ -127,65 +158,97 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+/* Кнопки — деревянные плашки с «толщиной»: при нажатии утапливаются */
 .btn {
   font: inherit;
-  font-weight: 600;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid var(--line);
+  font-weight: 700;
+  color: var(--cream);
+  background: linear-gradient(#80532f, #4c2d18);
+  border: 2px solid var(--wood-edge);
   border-radius: 12px;
-  padding: 10px 18px;
+  padding: 8px 18px 10px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 225, 170, 0.35),
+    0 3px 0 var(--wood-edge),
+    0 6px 8px rgba(0, 0, 0, 0.4);
   cursor: pointer;
   transition:
-    background 0.15s,
-    transform 0.1s;
+    transform 0.08s,
+    box-shadow 0.08s,
+    filter 0.15s;
 }
 
 .btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
+  filter: brightness(1.14);
 }
 
 .btn:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 225, 170, 0.35),
+    0 0 0 var(--wood-edge);
 }
 
 .btn:disabled {
-  opacity: 0.4;
+  filter: saturate(0.35) brightness(0.72);
   cursor: default;
 }
 
 .btn.primary {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: var(--gold-ink);
+  background: linear-gradient(#fbe08a, #d2952a);
+  border-color: var(--brass-dark);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 3px 0 var(--brass-dark),
+    0 6px 8px rgba(0, 0, 0, 0.4);
 }
 
-.btn.primary:hover:not(:disabled) {
-  background: #ffd469;
+.btn.primary:active:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 0 0 var(--brass-dark);
+}
+
+.btn.small {
+  padding: 5px 12px 7px;
+  font-size: 0.92rem;
 }
 
 .btn.ghost {
-  background: transparent;
+  background: none;
   border-color: transparent;
-  color: var(--muted);
+  box-shadow: none;
   padding: 8px 12px;
 }
 
+/* круглая латунная кнопка с значком: звук, правила */
 .btn.icon {
   display: grid;
   place-items: center;
-  padding: 6px 8px;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0 0 2px;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  color: var(--ink);
+  -webkit-text-stroke: 0;
+  background: radial-gradient(circle at 35% 30%, #fff0b8, #e3ad3f 55%, #b47a1e);
+  border-color: var(--brass-dark);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 3px 0 var(--brass-dark),
+    0 6px 8px rgba(0, 0, 0, 0.4);
+}
+
+.btn.icon:active:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 0 var(--brass-dark);
 }
 
 .btn.icon[aria-pressed='false'] {
-  opacity: 0.6;
-}
-
-.menu-sound {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  filter: saturate(0.25) brightness(0.8);
 }
 
 .btn.wide {
@@ -194,29 +257,32 @@ button:focus-visible {
 
 .segmented {
   display: flex;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  overflow: hidden;
+  padding: 3px;
+  gap: 3px;
+  border: 2px solid rgba(138, 100, 39, 0.6);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .segmented button {
   font: inherit;
-  color: var(--text);
+  font-weight: 700;
+  color: var(--muted);
   background: transparent;
   border: 0;
-  padding: 8px 14px;
-  min-width: 42px;
+  border-radius: 8px;
+  padding: 5px 13px 7px;
+  min-width: 40px;
   cursor: pointer;
 }
 
-.segmented button + button {
-  border-left: 1px solid var(--line);
-}
-
 .segmented button.on {
-  background: var(--gold);
-  color: var(--gold-ink);
-  font-weight: 700;
+  color: var(--cream);
+  background: linear-gradient(#fbe08a, #d2952a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 2px 0 var(--brass-dark);
 }
 
 .join {
@@ -230,11 +296,12 @@ button:focus-visible {
 }
 
 .room-code {
-  font-size: 2.4rem;
-  font-weight: 800;
-  letter-spacing: 0.22em;
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-align: center;
   color: var(--gold);
+  -webkit-text-stroke-width: 0.14em;
   user-select: all;
 }
 
@@ -254,7 +321,8 @@ button:focus-visible {
 .players li {
   padding: 8px 12px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(138, 100, 39, 0.4);
 }
 
 /* ---------- карты ---------- */
@@ -310,19 +378,25 @@ button:focus-visible {
 .card.stack {
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.25);
-  border: 2px dashed var(--line);
-  border-radius: calc(var(--cw) * 0.1);
-  filter: none;
-  color: var(--muted);
+  color: var(--cream);
   font-family: inherit;
   font-weight: 700;
   font-size: calc(var(--cw) * 0.3);
 }
 
+/* место под первую карту */
+.card.slot {
+  background: rgba(0, 0, 0, 0.25);
+  border: 2px dashed rgba(246, 201, 85, 0.55);
+  border-radius: calc(var(--cw) * 0.1);
+  filter: none;
+}
+
+/* закрытая часть стопки: затемнённая рубашка с числом карт под верхними */
 .card.stack {
-  border-style: solid;
-  background: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(rgba(20, 8, 4, 0.5), rgba(20, 8, 4, 0.5)),
+    url('/cards/back.webp') center / 100% 100%;
 }
 
 /* ---------- стол ---------- */
@@ -340,12 +414,14 @@ button:focus-visible {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  min-height: 46px;
 }
 
 .brand {
-  font-weight: 800;
-  font-size: 1.25rem;
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: 0.04em;
   color: var(--gold);
 }
 
@@ -361,19 +437,25 @@ button:focus-visible {
   flex: 1 1 0;
   min-width: 0;
   max-width: 230px;
-  padding: 8px 10px;
+  padding: 6px 10px 8px;
   border-radius: 14px;
-  border: 2px solid transparent;
-  background: var(--panel);
+  border: 2px solid rgba(138, 100, 39, 0.55);
+  background: rgba(24, 10, 6, 0.55);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  transition: border-color 0.2s;
+  gap: 5px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
+/* чей ход — рамка светится */
 .opponent.active {
   border-color: var(--gold);
+  box-shadow:
+    0 0 0 2px rgba(246, 201, 85, 0.3),
+    0 0 18px rgba(246, 201, 85, 0.5);
 }
 
 .opponent.out {
@@ -381,7 +463,7 @@ button:focus-visible {
 }
 
 .opp-name {
-  font-weight: 600;
+  font-weight: 700;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -391,7 +473,7 @@ button:focus-visible {
 .letters {
   margin-left: 6px;
   color: var(--gold);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.08em;
 }
 
@@ -435,16 +517,46 @@ button:focus-visible {
   margin-left: calc(var(--cw) * -0.5);
 }
 
+/* подсказка обучения — записка на пергаменте */
+.coach {
+  max-width: 520px;
+  padding: 12px 16px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--brass-dark);
+  background: linear-gradient(#f6e6bd, #e6cd94);
+  color: var(--ink);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.done-mark {
+  font-size: 3.4rem;
+  text-align: center;
+  color: var(--gold);
+  -webkit-text-stroke: 0.14em var(--ink);
+  paint-order: stroke fill;
+}
+
 .log {
   min-height: 3.9em;
   text-align: center;
   line-height: 1.3;
 }
 
+.log-last {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
 .log-old {
   color: var(--muted);
   font-size: 0.85rem;
-  opacity: 0.75;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
 
 .me {
@@ -455,16 +567,20 @@ button:focus-visible {
 }
 
 .status {
-  padding: 6px 14px;
+  padding: 5px 16px 7px;
   border-radius: 999px;
-  background: var(--panel);
+  border: 2px solid rgba(138, 100, 39, 0.6);
+  background: rgba(24, 10, 6, 0.7);
+  font-weight: 700;
   text-align: center;
 }
 
 .status.your-turn {
-  background: var(--gold);
-  color: var(--gold-ink);
-  font-weight: 700;
+  border-color: var(--brass-dark);
+  background: linear-gradient(#fbe08a, #d2952a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 0 16px rgba(246, 201, 85, 0.55);
 }
 
 .actions {
@@ -504,7 +620,7 @@ button:focus-visible {
   width: min(460px, 100%);
   max-height: 100%;
   overflow: auto;
-  background: var(--panel-solid);
+  background: linear-gradient(#45221a, #26110a);
 }
 
 .rules ul {
@@ -531,7 +647,7 @@ button:focus-visible {
 .result th,
 .result td {
   padding: 6px 8px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgba(138, 100, 39, 0.45);
 }
 
 .result th:last-child,
