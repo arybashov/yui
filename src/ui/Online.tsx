@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BotLevel } from '../game/bot';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../game/engine';
 import { Session } from '../game/session';
+import { OnlineRoom, OnlineState } from '../net/online';
 import { GuestClient, GuestState, HostRoom, HostRoomState } from '../net/room';
 import { BOT_LEVELS } from './Menu';
 import { Table } from './Table';
@@ -10,24 +11,27 @@ function roomLink(code: string): string {
   return `${location.origin}${location.pathname}?room=${code}`;
 }
 
-export function HostScreen({ room, hostName, onExit }: { room: HostRoom; hostName: string; onExit: () => void }) {
-  const [state, setState] = useState<HostRoomState>(room.state.get());
-  const [session, setSession] = useState<Session | null>(null);
+interface LobbyProps {
+  code: string;
+  names: string[];
+  you: number;
+  /** владелец комнаты добавляет ботов и начинает игру */
+  onStart?: (bots: number, level: BotLevel) => void;
+  hint?: string;
+}
+
+function Lobby({ code, names, you, onStart, hint }: LobbyProps) {
   const [bots, setBots] = useState(0);
   const [level, setLevel] = useState<BotLevel>('normal');
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => room.state.subscribe(setState), [room]);
-
-  if (session) return <Table session={session} onExit={onExit} />;
-
-  const maxBots = MAX_PLAYERS - 1 - state.guests.length;
+  const maxBots = MAX_PLAYERS - names.length;
   const botCount = Math.min(bots, maxBots);
-  const total = 1 + state.guests.length + botCount;
+  const total = names.length + botCount;
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(roomLink(state.code));
+      await navigator.clipboard.writeText(roomLink(code));
       setCopied(true);
     } catch {
       setCopied(false);
@@ -35,34 +39,31 @@ export function HostScreen({ room, hostName, onExit }: { room: HostRoom; hostNam
   };
 
   return (
-    <div className="screen">
-      <h1 className="title small">Комната</h1>
-      {state.status === 'opening' && <p className="muted">Создаём комнату…</p>}
-      {state.status === 'error' && <p className="error">{state.error}</p>}
-      {state.status === 'open' && (
-        <>
-          <div className="panel">
-            <span className="muted">Код комнаты</span>
-            <div className="room-code">{state.code}</div>
-            <button type="button" className="btn wide" onClick={copy}>
-              {copied ? 'Ссылка скопирована' : 'Скопировать ссылку'}
-            </button>
-            <p className="muted hint">Отправьте друзьям ссылку или код. Не закрывайте эту вкладку — игру ведёт она.</p>
-          </div>
+    <>
+      <div className="panel">
+        <span className="muted">Код комнаты</span>
+        <div className="room-code">{code}</div>
+        <button type="button" className="btn wide" onClick={copy}>
+          {copied ? 'Ссылка скопирована' : 'Скопировать ссылку'}
+        </button>
+        {hint && <p className="muted hint">{hint}</p>}
+      </div>
 
-          <div className="panel">
-            <h2>Игроки</h2>
-            <ul className="players">
-              <li>{hostName} (вы)</li>
-              {state.guests.map((guest, i) => (
-                <li key={i}>{guest}</li>
-              ))}
-              {Array.from({ length: botCount }, (_, i) => (
-                <li key={`bot${i}`} className="muted">
-                  Бот {i + 1}
-                </li>
-              ))}
-            </ul>
+      <div className="panel">
+        <h2>Игроки</h2>
+        <ul className="players">
+          {names.map((name, i) => (
+            <li key={i}>{i === you ? `${name} (вы)` : name}</li>
+          ))}
+          {onStart &&
+            Array.from({ length: botCount }, (_, i) => (
+              <li key={`bot${i}`} className="muted">
+                Бот {i + 1}
+              </li>
+            ))}
+        </ul>
+        {onStart ? (
+          <>
             <div className="field">
               <span>Добавить ботов</span>
               <div className="segmented">
@@ -101,13 +102,24 @@ export function HostScreen({ room, hostName, onExit }: { room: HostRoom; hostNam
               type="button"
               className="btn primary wide"
               disabled={total < MIN_PLAYERS}
-              onClick={() => setSession(room.startGame(botCount, level))}
+              onClick={() => onStart(botCount, level)}
             >
               {total < MIN_PLAYERS ? 'Ждём игроков…' : `Начать игру (${total})`}
             </button>
-          </div>
-        </>
-      )}
+          </>
+        ) : (
+          <p className="muted hint">Ждём, пока создатель комнаты начнёт игру…</p>
+        )}
+      </div>
+    </>
+  );
+}
+
+function RoomFrame({ children, onExit }: { children: React.ReactNode; onExit: () => void }) {
+  return (
+    <div className="screen">
+      <h1 className="title small">Комната</h1>
+      {children}
       <button type="button" className="btn ghost" onClick={onExit}>
         Назад
       </button>
@@ -115,7 +127,71 @@ export function HostScreen({ room, hostName, onExit }: { room: HostRoom; hostNam
   );
 }
 
-export function GuestScreen({ client, onExit }: { client: GuestClient; onExit: () => void }) {
+/** Комната на игровом сервере. */
+export function OnlineScreen({ room, onExit }: { room: OnlineRoom; onExit: () => void }) {
+  const [state, setState] = useState<OnlineState>(room.state.get());
+  const [started, setStarted] = useState(false);
+
+  useEffect(
+    () =>
+      room.state.subscribe((next) => {
+        setState(next);
+        if (next.status === 'game') setStarted(true);
+      }),
+    [room],
+  );
+
+  if (started) {
+    let notice: string | undefined;
+    if (state.status === 'reconnecting') notice = 'Восстанавливаем связь…';
+    if (state.status === 'closed') notice = state.error ?? 'Связь с сервером потеряна';
+    return <Table session={room} onExit={onExit} notice={notice} />;
+  }
+
+  return (
+    <RoomFrame onExit={onExit}>
+      {state.status === 'connecting' && <p className="muted">Подключаемся…</p>}
+      {(state.status === 'error' || state.status === 'closed') && <p className="error">{state.error}</p>}
+      {state.status === 'lobby' && (
+        <Lobby
+          code={state.code}
+          names={state.names}
+          you={state.you}
+          onStart={state.you === state.owner ? (bots, level) => room.start(bots, level) : undefined}
+          hint="Отправьте друзьям ссылку или код."
+        />
+      )}
+    </RoomFrame>
+  );
+}
+
+/** Комната без сервера: партию ведёт вкладка создателя. */
+export function HostScreen({ room, hostName, onExit }: { room: HostRoom; hostName: string; onExit: () => void }) {
+  const [state, setState] = useState<HostRoomState>(room.state.get());
+  const [session, setSession] = useState<Session | null>(null);
+
+  useEffect(() => room.state.subscribe(setState), [room]);
+
+  if (session) return <Table session={session} onExit={onExit} />;
+
+  return (
+    <RoomFrame onExit={onExit}>
+      {state.status === 'opening' && <p className="muted">Создаём комнату…</p>}
+      {state.status === 'error' && <p className="error">{state.error}</p>}
+      {state.status === 'open' && (
+        <Lobby
+          code={state.code}
+          names={[hostName, ...state.guests]}
+          you={0}
+          onStart={(bots, level) => setSession(room.startGame(bots, level))}
+          hint="Отправьте друзьям ссылку или код. Не закрывайте эту вкладку — игру ведёт она."
+        />
+      )}
+    </RoomFrame>
+  );
+}
+
+export function GuestScreen({ client, code, onExit }: { client: GuestClient; code: string; onExit: () => void }) {
   const [state, setState] = useState<GuestState>(client.state.get());
   const [started, setStarted] = useState(false);
 
@@ -139,25 +215,11 @@ export function GuestScreen({ client, onExit }: { client: GuestClient; onExit: (
   }
 
   return (
-    <div className="screen">
-      <h1 className="title small">Комната</h1>
+    <RoomFrame onExit={onExit}>
       {state.status === 'connecting' && <p className="muted">Подключаемся…</p>}
       {state.status === 'error' && <p className="error">{state.error}</p>}
       {state.status === 'closed' && <p className="error">Хост закрыл комнату</p>}
-      {state.status === 'lobby' && (
-        <div className="panel">
-          <h2>Игроки</h2>
-          <ul className="players">
-            {state.names.map((name, i) => (
-              <li key={i}>{i === state.you ? `${name} (вы)` : name}</li>
-            ))}
-          </ul>
-          <p className="muted hint">Ждём, пока хост начнёт игру…</p>
-        </div>
-      )}
-      <button type="button" className="btn ghost" onClick={onExit}>
-        Назад
-      </button>
-    </div>
+      {state.status === 'lobby' && <Lobby code={code} names={state.names} you={state.you} />}
+    </RoomFrame>
   );
 }

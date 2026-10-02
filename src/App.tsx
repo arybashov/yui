@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { BotLevel } from './game/bot';
 import { HostSeat, HostSession } from './game/session';
-import { GuestClient, HostRoom, normalizeRoomCode } from './net/room';
+import { OnlineRoom, SERVER_URL } from './net/online';
+import { normalizeRoomCode } from './net/protocol';
+import { GuestClient, HostRoom } from './net/room';
 import { Menu } from './ui/Menu';
-import { GuestScreen, HostScreen } from './ui/Online';
+import { GuestScreen, HostScreen, OnlineScreen } from './ui/Online';
 import { Table } from './ui/Table';
 import { Tutorial } from './ui/Tutorial';
 
@@ -11,8 +13,9 @@ type Screen =
   | { kind: 'menu' }
   | { kind: 'tutorial' }
   | { kind: 'local'; session: HostSession }
+  | { kind: 'online'; room: OnlineRoom }
   | { kind: 'host'; room: HostRoom }
-  | { kind: 'guest'; client: GuestClient };
+  | { kind: 'guest'; client: GuestClient; code: string };
 
 const NAME_KEY = 'yui.name';
 
@@ -42,6 +45,7 @@ export function App() {
 
   const toMenu = () => {
     if (screen.kind === 'local') screen.session.leave();
+    if (screen.kind === 'online') screen.room.leave();
     if (screen.kind === 'host') screen.room.close();
     if (screen.kind === 'guest') screen.client.leave();
     setScreen({ kind: 'menu' });
@@ -68,8 +72,20 @@ export function App() {
           }}
           initialCode={roomCode}
           onPlayBots={playBots}
-          onHost={() => setScreen({ kind: 'host', room: new HostRoom(playerName) })}
-          onJoin={(code) => setScreen({ kind: 'guest', client: new GuestClient(code, playerName) })}
+          onHost={() =>
+            setScreen(
+              SERVER_URL
+                ? { kind: 'online', room: new OnlineRoom(SERVER_URL, { create: true, name: playerName }) }
+                : { kind: 'host', room: new HostRoom(playerName) },
+            )
+          }
+          onJoin={(code) =>
+            setScreen(
+              SERVER_URL
+                ? { kind: 'online', room: new OnlineRoom(SERVER_URL, { code, name: playerName }) }
+                : { kind: 'guest', client: new GuestClient(code, playerName), code },
+            )
+          }
           onTutorial={() => setScreen({ kind: 'tutorial' })}
         />
       );
@@ -77,9 +93,11 @@ export function App() {
       return <Tutorial onExit={toMenu} onPlay={() => playBots(1, 'easy')} />;
     case 'local':
       return <Table session={screen.session} onExit={toMenu} />;
+    case 'online':
+      return <OnlineScreen room={screen.room} onExit={toMenu} />;
     case 'host':
       return <HostScreen room={screen.room} hostName={playerName} onExit={toMenu} />;
     case 'guest':
-      return <GuestScreen client={screen.client} onExit={toMenu} />;
+      return <GuestScreen client={screen.client} code={screen.code} onExit={toMenu} />;
   }
 }

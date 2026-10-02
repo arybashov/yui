@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { GAME_TITLE } from '../config';
 import { BotLevel } from '../game/bot';
 import { MAX_PLAYERS } from '../game/engine';
-import { normalizeRoomCode } from '../net/room';
+import { normalizeRoomCode } from '../net/protocol';
 import { Rules } from './Rules';
 import { SoundToggle } from './SoundToggle';
 

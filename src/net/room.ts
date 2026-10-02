@@ -3,13 +3,12 @@ import { BotLevel } from '../game/bot';
 import { MAX_PLAYERS, Move } from '../game/engine';
 import { HostSeat, HostSession, PlayerView, Session } from '../game/session';
 import { Store } from '../store';
+import { makeRoomCode } from './protocol';
 
 // Сеть работает напрямую между браузерами (WebRTC через PeerJS).
 // Партию ведёт хост: гости присылают ходы и получают свой вид стола.
 
 const ROOM_PREFIX = 'yui-room-';
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const CODE_LENGTH = 5;
 const CONNECT_TIMEOUT_MS = 15000;
 
 type HostMessage =
@@ -18,18 +17,6 @@ type HostMessage =
   | { t: 'reject'; reason: string };
 
 type GuestMessage = { t: 'hello'; name: string } | { t: 'move'; move: Move };
-
-function makeRoomCode(): string {
-  let code = '';
-  for (let i = 0; i < CODE_LENGTH; i++) {
-    code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  }
-  return code;
-}
-
-export function normalizeRoomCode(raw: string): string {
-  return raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-}
 
 export interface HostRoomState {
   status: 'opening' | 'open' | 'error';

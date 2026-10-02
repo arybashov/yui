@@ -42,18 +42,23 @@ export interface HostSeat {
   kind: 'local' | 'bot' | 'remote';
   /** для удалённого игрока — отправка его вида по сети */
   send?: (view: PlayerView) => void;
+  /** имя игрока, за которого временно играет бот, пока нет связи */
+  human?: string;
 }
 
 export interface HostOptions {
   botLevel: BotLevel;
   botDelayMs?: number;
   onLeave?: () => void;
+  /** кто может начинать новую раздачу; по умолчанию — локальный игрок */
+  ownerSeat?: number;
 }
 
 const LOG_TAIL = 6;
 export const LOSSES_TO_LOSE_MATCH = GAME_TITLE.length;
 
-/** Ведёт партию: и локальную с ботами, и сетевую на стороне хоста. */
+/** Ведёт партию: локальную с ботами, сетевую на стороне хоста и на игровом сервере
+ *  (там локального игрока нет, все места — удалённые или боты). */
 export class HostSession implements Session {
   private state: GameState;
   private losses: number[];
@@ -61,12 +66,14 @@ export class HostSession implements Session {
   private listeners = new Set<(view: PlayerView) => void>();
   private botTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly localSeat: number;
+  private ownerSeat: number;
 
   constructor(
     private seats: HostSeat[],
     private options: HostOptions,
   ) {
     this.localSeat = seats.findIndex((s) => s.kind === 'local');
+    this.ownerSeat = options.ownerSeat ?? this.localSeat;
     this.losses = seats.map(() => 0);
     this.state = deal(seats.length);
   }
@@ -77,7 +84,7 @@ export class HostSession implements Session {
 
   subscribe(listener: (view: PlayerView) => void): () => void {
     this.listeners.add(listener);
-    listener(this.viewFor(this.localSeat));
+    if (this.localSeat >= 0) listener(this.viewFor(this.localSeat));
     return () => this.listeners.delete(listener);
   }
 
@@ -113,8 +120,29 @@ export class HostSession implements Session {
   detach(seat: number): void {
     const current = this.seats[seat];
     if (!current || current.kind !== 'remote') return;
-    this.seats[seat] = { name: `${current.name} (бот)`, kind: 'bot' };
+    this.seats[seat] = { name: `${current.name} (бот)`, kind: 'bot', human: current.name };
     this.broadcast();
+  }
+
+  /** Отключившийся игрок вернулся и снова играет сам. */
+  attach(seat: number, send: (view: PlayerView) => void): void {
+    const current = this.seats[seat];
+    if (!current || current.kind === 'local') return;
+    // настоящего бота игроком не подменяем
+    if (current.kind === 'bot' && current.human === undefined) return;
+    this.seats[seat] = { name: current.human ?? current.name, kind: 'remote', send };
+    this.broadcast();
+  }
+
+  setOwner(seat: number): void {
+    if (seat === this.ownerSeat) return;
+    this.ownerSeat = seat;
+    this.broadcast();
+  }
+
+  /** Новая раздача по просьбе удалённого игрока — только если он владелец комнаты. */
+  requestNewDeal(seat: number): void {
+    if (seat === this.ownerSeat) this.newDeal();
   }
 
   leave(): void {
@@ -149,7 +177,7 @@ export class HostSession implements Session {
       moveNo: state.log.length,
       dealNo: this.dealNo,
       matchLoser: this.state.phase === 'over' ? this.matchLoser() : null,
-      canRestart: seat === this.localSeat,
+      canRestart: seat === this.ownerSeat,
     };
   }
 
@@ -157,8 +185,10 @@ export class HostSession implements Session {
     this.seats.forEach((seat, i) => {
       if (seat.kind === 'remote') seat.send?.(this.viewFor(i));
     });
-    const local = this.viewFor(this.localSeat);
-    this.listeners.forEach((listener) => listener(local));
+    if (this.localSeat >= 0) {
+      const local = this.viewFor(this.localSeat);
+      this.listeners.forEach((listener) => listener(local));
+    }
     this.scheduleBot();
   }
 
