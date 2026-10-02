@@ -150,6 +150,26 @@ export class HostSession implements Session {
     this.broadcast();
   }
 
+  /** Сводка партии для админки: без карт на руках, только состояние и игроки. */
+  snapshot(): {
+    phase: GameState['phase'];
+    dealNo: number;
+    players: { name: string; isBot: boolean; away: boolean; count: number; place: number | null }[];
+  } {
+    const { state } = this;
+    return {
+      phase: state.phase,
+      dealNo: this.dealNo,
+      players: this.seats.map((seat, i) => ({
+        name: seat.human ?? seat.name,
+        isBot: seat.kind === 'bot',
+        away: seat.human !== undefined,
+        count: state.hands[i].length,
+        place: state.finished.includes(i) ? state.finished.indexOf(i) + 1 : null,
+      })),
+    };
+  }
+
   /** Новая раздача по просьбе удалённого игрока — только если он владелец комнаты. */
   requestNewDeal(seat: number): void {
     if (seat === this.ownerSeat) this.newDeal();

@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, Server } from 'node:http';
 import { WebSocket, WebSocketServer } from 'ws';
 import { BotLevel } from '../src/game/bot';
@@ -41,6 +41,26 @@ const MAX_ROOMS = 500;
 const MAX_MESSAGE_BYTES = 4096;
 const PING_INTERVAL_MS = 30000;
 
+// Админ-данные отдаются под тем же логином/паролем, что админка RRaM, — чтобы
+// не плодить отдельную учётку. Без ADMIN_PASSWORD эндпоинт закрыт (503).
+const ADMIN_USER = process.env.ADMIN_USER ?? 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? '';
+
+function safeEqual(a: string, b: string): boolean {
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ba.length === bb.length && timingSafeEqual(ba, bb);
+}
+
+function adminAuthorized(header: string | undefined): boolean {
+  if (!ADMIN_PASSWORD) return false;
+  const m = /^Basic\s+(.+)$/i.exec(header ?? '');
+  if (!m) return false;
+  const dec = Buffer.from(m[1], 'base64').toString('utf8');
+  const i = dec.indexOf(':');
+  return i >= 0 && safeEqual(dec.slice(0, i), ADMIN_USER) && safeEqual(dec.slice(i + 1), ADMIN_PASSWORD);
+}
+
 function send(socket: WebSocket | null, message: ServerMessage): void {
   if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
 }
@@ -71,10 +91,45 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
   const seats = new Map<WebSocket, { room: Room; member: Member }>();
   const emptyRoomTtlMs = options.emptyRoomTtlMs ?? 10 * 60 * 1000;
 
+  // Сводка для админки: комнаты, игроки, идёт ли партия. Без чужих личных данных
+  // и без карт на руках — только то, что нужно для диагностики.
+  const adminData = () => ({
+    game: 'yui',
+    now: Date.now(),
+    uptimeSec: Math.round(process.uptime()),
+    counts: {
+      rooms: rooms.size,
+      connections: seats.size,
+      playing: [...rooms.values()].filter((r) => r.session).length,
+      lobby: [...rooms.values()].filter((r) => !r.session).length,
+    },
+    rooms: [...rooms.values()].map((room) => ({
+      code: room.code,
+      started: Boolean(room.session),
+      members: room.members.map((m) => ({ name: m.name, connected: m.socket !== null })),
+      game: room.session?.snapshot() ?? null,
+    })),
+  });
+
   const http = createServer((request, response) => {
     if (request.url === '/health') {
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ ok: true, rooms: rooms.size }));
+      return;
+    }
+    if (request.url === '/admin/data') {
+      if (!ADMIN_PASSWORD) {
+        response.writeHead(503, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({ error: 'admin_not_configured' }));
+        return;
+      }
+      if (!adminAuthorized(request.headers.authorization)) {
+        response.writeHead(401, { 'www-authenticate': 'Basic realm="yui"' });
+        response.end();
+        return;
+      }
+      response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      response.end(JSON.stringify(adminData()));
       return;
     }
     response.writeHead(404);
