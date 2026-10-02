@@ -1,0 +1,42 @@
+name: Build server release
+
+# Собирает клиент (с адресом игрового сервера) и сам сервер и кладёт их
+# в релиз `latest`. Сервер забирает готовые файлы оттуда — deploy/deploy.sh.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+env:
+  YUI_DOMAIN: yui.com.ru
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          VITE_SERVER_URL: wss://${{ env.YUI_DOMAIN }}/ws
+      - run: npm run build:server
+      - run: tar -czf site.tar.gz -C dist .
+      - name: Publish the latest build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view latest >/dev/null 2>&1 || gh release create latest --title "Latest build" --notes "Сборка для сервера: обновляется при каждом пуше в main."
+          gh release upload latest site.tar.gz dist-server/server.cjs --clobber

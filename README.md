@@ -55,7 +55,14 @@ npm run server                                   # сервер на порту 
 VITE_SERVER_URL=ws://127.0.0.1:8787 npm run dev  # клиент, который к нему подключается
 ```
 
-Выкладка на свой сервер — `deploy/deploy.sh` и образец конфига nginx `deploy/nginx-yui.conf`.
+Выкладка на свой сервер: при каждом пуше в `main` GitHub собирает клиент (с адресом `wss://yui.com.ru/ws`)
+и сервер и кладёт их в релиз `latest`. На сервере нужны node 20+, pm2, nginx, certbot; первый раз:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/arybashov/yui/main/deploy/deploy.sh | sudo bash -s -- you@example.com
+```
+
+Та же команда без e-mail обновляет игру до свежей сборки. Конфиг nginx — `deploy/nginx-yui.conf`.
 
 ## Яндекс Игры
 
