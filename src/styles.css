@@ -10,7 +10,7 @@
   --danger: #ffb4a8;
   --cw: clamp(46px, 11.5vw, 84px);
   /* пропорция нарисованных карт, см. art/slice.py */
-  --ch: calc(var(--cw) * 1.785);
+  --card-ratio: 1.785;
   font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
   color: var(--text);
 }
@@ -259,6 +259,14 @@ button:focus-visible {
 
 /* ---------- карты ---------- */
 
+/* Высота считается там, где карта рисуется: у соперников своя, меньшая --cw,
+   и посчитанная в :root высота растягивала бы их карты. */
+.card,
+.opp-cards,
+.hand {
+  --ch: calc(var(--cw) * var(--card-ratio));
+}
+
 /* Карты — картинки с неровными обожжёнными краями, поэтому тень и подсветка
    делаются через drop-shadow, а не через рамку. */
 .card {
@@ -349,7 +357,7 @@ button:focus-visible {
 }
 
 .opponent {
-  --cw: clamp(20px, 4.4vw, 30px);
+  --cw: clamp(24px, 5.2vw, 40px);
   flex: 1 1 0;
   min-width: 0;
   max-width: 230px;
