@@ -48,10 +48,18 @@ rm -rf "$WEBROOT.old"
 echo "Сервер -> $APP"
 mkdir -p "$APP"
 install -m 644 "$work/server.cjs" "$APP/server.cjs"
+# Логин/пароль админки (общие с RRaM) лежат в root-only файле и переживают обновления.
+# Если файла нет — сервер просто отдаёт /admin/data как 503, игра работает как обычно.
+export HOST=127.0.0.1 PORT=$PORT
+if [[ -f "$APP/yui.env" ]]; then
+  set -a
+  . "$APP/yui.env"
+  set +a
+fi
 if pm2 describe yui >/dev/null 2>&1; then
-  HOST=127.0.0.1 PORT=$PORT pm2 restart yui --update-env
+  pm2 restart yui --update-env
 else
-  HOST=127.0.0.1 PORT=$PORT pm2 start "$APP/server.cjs" --name yui
+  pm2 start "$APP/server.cjs" --name yui
 fi
 pm2 save
 
