@@ -110,7 +110,7 @@ export const ru: Dict = {
   ownerStartsDeal: 'Новую раздачу начнёт создатель комнаты',
   ownerStartsMatch: 'Новый матч начнёт создатель комнаты',
 
-  tutorialTitle: (step, total) => `Обучение · шаг ${step} из ${total}`,
+  tutorialTitle: (step, total) => `Обучение ${step}/${total}`,
   next: 'Дальше',
   finish: 'Завершить',
   teacher: 'Учитель',

@@ -101,7 +101,7 @@ export const en: Dict = {
   ownerStartsDeal: 'The room owner starts the next deal',
   ownerStartsMatch: 'The room owner starts the next match',
 
-  tutorialTitle: (step, total) => `Tutorial · step ${step} of ${total}`,
+  tutorialTitle: (step, total) => `Tutorial ${step}/${total}`,
   next: 'Next',
   finish: 'Finish',
   teacher: 'Teacher',

@@ -8,7 +8,7 @@
   --brass-dark: #6b430f;
   --wood-edge: #1d0f06;
   --danger: #ffb4a8;
-  --cw: clamp(46px, 11.5vw, 84px);
+  --cw: clamp(54px, 15vw, 84px);
   /* пропорция нарисованных карт, см. art/slice.py */
   --card-ratio: 1.785;
   font-family: 'Balsamiq Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
@@ -440,6 +440,12 @@ button:focus-visible {
   min-height: 46px;
 }
 
+/* подпись рядом с названием: номер раздачи или шаг обучения — в одну строку и на телефоне */
+.topbar .muted {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
 .brand {
   font-weight: 700;
   font-size: 1.5rem;
@@ -525,7 +531,7 @@ button:focus-visible {
 
 .pile {
   /* стопка — центр стола, карты в ней крупнее, чем в руке */
-  --cw: clamp(56px, min(15vw, 13vh), 124px);
+  --cw: clamp(56px, min(20vw, 13vh), 124px);
   display: flex;
   align-items: center;
   gap: calc(var(--cw) * 0.14);
