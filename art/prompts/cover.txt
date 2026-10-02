@@ -1,0 +1,13 @@
+Use your built-in image generation tool (do not write code to draw, do not draw SVG, do not use any MCP server) to create ONE image and save it as art/raw/cover.png inside the current directory (overwrite the existing file).
+
+This is the catalogue COVER of a card game called YUI. Four reference images are attached: three sheets of the game's playing cards (kings, queens, tens) and the game's table. Match their art style exactly: semi-cartoon hand-painted 2D game art, bold dark ink outlines, old yellowed parchment cards with scorched, burnt irregular edges. The characters on the cards must be the same characters as on the reference sheets.
+
+Composition:
+- Landscape image, about 1536x1024, full bleed: the artwork fills the whole image edge to edge. No rounded corners, no border, no frame. Keep every important element away from the top and bottom edges (leave at least 12% of the height free at the top and at the bottom), because the image will be cropped to a wider format.
+- Background: only the game's table seen from above — dark polished wood with a round deep-burgundy leather inlay inside an ornate brass ring, warm lighting, a few glowing embers and sparks in the air. Nothing else lies on the table: NO coins, NO money, NO chips, NO mugs or drinks, NO candles, NO books, NO cloth, NO other objects.
+- Left and centre: a dynamic overlapping spread of exactly five of the game's aged burnt cards: the Ten of Spades largest and in front; behind and around it the King of Hearts (the jolly laughing ginger-bearded king from the reference), the King of Spades (the gaunt old king with the long white beard from the reference), the Queen of Hearts (the smiling queen with curly ginger hair from the reference) and one Ace of Diamonds with a single large ornate diamond. Each card's corner index must match its picture (10 with spade, K with heart, K with spade, Q with heart, A with diamond). Do not draw any jack.
+- Right side: the game title, exactly the three capital letters YUI, very large, in rounded bold cartoon lettering, golden yellow with a thick dark brown outline and a soft drop shadow. The title must be spelled exactly Y, U, I — nothing else.
+- Bright, saturated, inviting colours.
+- No other words or letters besides the title and the card indices. No watermark, no logos, no UI elements, no buttons.
+
+When the file is saved, reply with just the saved path and the image pixel size.

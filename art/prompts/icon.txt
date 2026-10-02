@@ -1,0 +1,12 @@
+Use your built-in image generation tool (do not write code to draw, do not draw SVG, do not use any MCP server) to create ONE image and save it as art/raw/icon.png inside the current directory (overwrite the existing file).
+
+This is the catalogue ICON of a card game called YUI. Four reference images are attached: three sheets of the game's playing cards (kings, queens, tens) and the game's table. Match their art style exactly: semi-cartoon hand-painted 2D game art, bold dark ink outlines, old yellowed parchment cards with scorched, burnt irregular edges.
+
+Composition:
+- Square image, about 1024x1024, full bleed: the artwork fills the whole square edge to edge. No rounded corners, no border, no frame, no vignette frame, no drop-shadowed tile.
+- Background: the game's table — dark polished wood with a deep burgundy leather inlay and a hint of an ornate brass ring, slightly blurred and darker so the cards pop.
+- In the centre, large and bold, a fan of three of the game's aged burnt cards: the Ten of Spades in front (clearly readable, with its 10 and spade index), and fanned behind it the King of Hearts (the jolly laughing ginger-bearded king from the reference sheet) and the Queen of Diamonds (the elegant older queen with silver-grey hair in a tall updo and a gold-and-cream dress from the reference sheet). The characters must be the same as on the reference sheets. The cards are big, filling about 75% of the square, slightly tilted, bright and high-contrast, with a warm golden glow and a few tiny embers and sparks drifting from the burnt edges.
+- Bright, saturated, eye-catching colours; it must stay readable when shrunk to a small icon.
+- No title, no words, no letters other than the card indices (10, K, Q). No watermark, no logos, no UI elements.
+
+When the file is saved, reply with just the saved path and the image pixel size.
