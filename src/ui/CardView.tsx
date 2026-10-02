@@ -2,7 +2,7 @@ import { Card, createDeck } from '../game/engine';
 import { cardLabel } from './text';
 
 // Картинки карт лежат в public/cards и нарезаются скриптом art/slice.py.
-const cardImage = (name: string) => `${import.meta.env.BASE_URL}cards/${name}.webp`;
+export const cardImage = (name: string) => `${import.meta.env.BASE_URL}cards/${name}.webp`;
 
 /** Загружает всю колоду заранее, чтобы карты не появлялись на столе с задержкой. */
 export function preloadCards(): void {
@@ -24,13 +24,19 @@ export function CardView({ card, dimmed, onClick }: CardViewProps) {
   const face = <img src={cardImage(card.id)} alt="" draggable={false} />;
   if (!onClick) {
     return (
-      <div className={className} role="img" aria-label={cardLabel(card)}>
+      <div className={className} data-card={card.id} role="img" aria-label={cardLabel(card)}>
         {face}
       </div>
     );
   }
   return (
-    <button type="button" className={className} aria-label={cardLabel(card)} onClick={onClick}>
+    <button
+      type="button"
+      className={className}
+      data-card={card.id}
+      aria-label={cardLabel(card)}
+      onClick={onClick}
+    >
       {face}
     </button>
   );

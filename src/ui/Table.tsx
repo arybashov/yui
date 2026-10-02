@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GAME_TITLE } from '../config';
 import { Card, legalMoves, takeCount } from '../game/engine';
 import { PlayerInfo, PlayerView, Session } from '../game/session';
+import { useCardAnimations } from './animations';
 import { CardBack, CardView } from './CardView';
 import { Rules } from './Rules';
 import { playSound } from './sound';
@@ -33,6 +34,7 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
   const [showRules, setShowRules] = useState(false);
 
   const previous = useRef<PlayerView | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
   const tutorial = coach !== undefined;
 
   useEffect(() => session.subscribe(setView), [session]);
@@ -42,6 +44,8 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
     playViewSounds(previous.current, view, tutorial);
     previous.current = view;
   }, [view, tutorial]);
+
+  useCardAnimations(tableRef, view, tutorial);
 
   if (!view) {
     return (
@@ -83,7 +87,7 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
   const recent = view.log.slice(-3).reverse();
 
   return (
-    <div className="table">
+    <div className="table" ref={tableRef}>
       <header className="topbar">
         <span className="brand">{GAME_TITLE}</span>
         <span className="muted">{coach ? coach.title : `Раздача ${view.dealNo}`}</span>
@@ -104,7 +108,12 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
 
       <section className="opponents">
         {opponents.map((seat) => (
-          <Opponent key={seat} player={players[seat]} active={playing && view.turn === seat} />
+          <Opponent
+            key={seat}
+            seat={seat}
+            player={players[seat]}
+            active={playing && view.turn === seat}
+          />
         ))}
       </section>
 
@@ -216,10 +225,10 @@ function letters(losses: number): string {
   return GAME_TITLE.slice(0, losses);
 }
 
-function Opponent({ player, active }: { player: PlayerInfo; active: boolean }) {
+function Opponent({ seat, player, active }: { seat: number; player: PlayerInfo; active: boolean }) {
   const out = player.place !== null;
   return (
-    <div className={`opponent ${active ? 'active' : ''} ${out ? 'out' : ''}`}>
+    <div className={`opponent ${active ? 'active' : ''} ${out ? 'out' : ''}`} data-seat={seat}>
       <div className="opp-name">
         {player.name}
         {player.losses > 0 && <span className="letters">{letters(player.losses)}</span>}

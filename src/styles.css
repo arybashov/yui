@@ -420,6 +420,8 @@ button:focus-visible {
 }
 
 .pile {
+  /* стопка — центр стола, карты в ней крупнее, чем в руке */
+  --cw: clamp(56px, min(15vw, 13vh), 124px);
   display: flex;
   align-items: center;
   gap: calc(var(--cw) * 0.14);
@@ -431,37 +433,6 @@ button:focus-visible {
 
 .pile-top .card + .card {
   margin-left: calc(var(--cw) * -0.5);
-}
-
-.pile-top .card {
-  animation: drop 0.22s ease-out;
-}
-
-@keyframes drop {
-  from {
-    transform: translateY(-18px) scale(1.08);
-    opacity: 0;
-  }
-}
-
-.coach {
-  max-width: 520px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--gold);
-  background: var(--panel);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  text-align: center;
-  line-height: 1.4;
-}
-
-.done-mark {
-  font-size: 3rem;
-  text-align: center;
-  color: var(--gold);
 }
 
 .log {

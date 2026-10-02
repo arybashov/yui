@@ -1,4 +1,4 @@
-Use your built-in image generation tool (do not write code to draw, do not draw SVG, do not use any MCP server) to create ONE image and save it as art/raw/kings.png inside the current directory.
+Use your built-in image generation tool (do not write code to draw, do not draw SVG, do not use any MCP server) to create ONE image and save it as art/raw/kings.png inside the current directory (overwrite the existing file).
 
 STYLE (must be followed exactly):
 - One image, landscape, about 1536x1024.
@@ -10,6 +10,12 @@ STYLE (must be followed exactly):
 - Each card has a corner index in the top-left corner and the same index rotated 180 degrees in the bottom-right corner: the rank on top and a small suit symbol under it. Indices are large and bold.
 - No green color anywhere on the cards. No extra text, no watermark, no logos.
 
-CONTENT: four KING cards, left to right: King of Spades, King of Hearts, King of Diamonds, King of Clubs. The rank in the corner index is the single capital letter K. The center of each card shows a semi-cartoon king character (bust, crown, beard, slightly grumpy weathered look), each king a little different, with one large suit symbol of that card's suit next to him.
+CONTENT: four KING cards, left to right: King of Spades, King of Hearts, King of Diamonds, King of Clubs. The rank in the corner index is the single capital letter K. The center of each card shows a semi-cartoon king character (bust) with one large suit symbol of that card's suit next to him. IMPORTANT: the four characters must be four clearly DIFFERENT people, instantly distinguishable at a small size: different age, face shape, hair color and hairstyle, facial hair, skin tone, expression, pose and head direction, headwear and costume colors. Do not reuse the same face.
+- King of Spades: a gaunt old stern king with a very long white beard, hollow cheeks, dark iron spiked crown, black and grey robe, looking left.
+- King of Hearts: a fat jolly laughing king with round red cheeks, big ginger beard and curly ginger hair, a wide golden crown, red robe, facing the viewer.
+- King of Diamonds: a slim sly middle-aged king with tanned skin, a sharp black pointed goatee and thin curled moustache, a tall jeweled crown, gold and orange robe, raised eyebrow, looking right.
+- King of Clubs: a burly warrior king with a scar across one eye, short dark stubble beard, shaved sides, a battered bronze crown, fur cloak over armor, grim look, three-quarter view.
+
+A reference image is attached: a sheet of four TEN cards from the same deck. Match its parchment color, burnt edges, card shape and proportions, card size and position on the sheet, corner index typography and overall layout exactly, so the new cards look like part of the same deck. The characters must be painted in a semi-cartoon inked style that fits these cards.
 
 When the file is saved, reply with just the saved path and the image pixel size.
