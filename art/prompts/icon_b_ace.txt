@@ -1,0 +1,13 @@
+Use your built-in image generation tool (do not write code to draw, do not draw SVG, do not use any MCP server) to create ONE image and save it as art/raw/icon_b_ace.png inside the current directory.
+
+This is the APP ICON of a card game called YUI for the Yandex Games catalogue. Reference images are attached: sheets of the game's own playing cards and the game's table. Match the card art exactly: old yellowed parchment with scorched, burnt irregular edges, bold dark ink outlines, semi-cartoon hand-painted 2D game art.
+
+Icon rules (very important):
+- Square image, about 1024x1024, full bleed: the artwork fills the whole square edge to edge. No rounded corners, no border, no frame, no tile, no drop shadow around the square.
+- ONE bold central subject, large, filling about 70% of the square, so it stays readable when the icon is shrunk to 64 pixels. Simple strong silhouette, high contrast against the background.
+- Background: dark and warm — deep burgundy leather fading to near-black at the corners, with a soft warm glow behind the subject and a few tiny glowing embers. No table edges, no other objects, no clutter.
+- No words, no title, no letters other than the card's own corner index. No watermark, no logos, no UI.
+
+SUBJECT: a single Ace of Spades card from the reference sheet (index A with a spade in the corners, ONE very large ornate black spade with a golden flourish in the centre), standing upright, tilted about 8 degrees, glowing ember light along its burnt edges.
+
+When the file is saved, reply with just the saved path and the image pixel size.

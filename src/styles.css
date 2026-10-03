@@ -337,36 +337,97 @@ button:focus-visible {
     0 2px 0 var(--brass-dark);
 }
 
-.flags {
+/* ---------- настройки и пауза (как в «Городках») ---------- */
+
+.settings,
+.pause-menu {
+  width: min(420px, 100%);
+}
+
+.toggles {
   display: flex;
-  gap: 8px;
-}
-
-.flag {
-  width: clamp(36px, 11vw, 48px);
-  aspect-ratio: 3 / 2;
-  padding: 0;
-  border: 2px solid var(--wood-edge);
-  border-radius: 6px;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid rgba(138, 100, 39, 0.45);
+  background: rgba(0, 0, 0, 0.28);
   overflow: hidden;
-  background: none;
-  cursor: pointer;
-  filter: saturate(0.5) brightness(0.65);
-  transition:
-    filter 0.15s,
-    box-shadow 0.15s;
 }
 
-.flag svg {
-  display: block;
+/* строка нажимается целиком, состояние — переключатель справа */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  height: 100%;
+  min-height: 62px;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  color: var(--cream);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.flag.on {
-  filter: none;
-  border-color: var(--gold);
-  box-shadow: 0 0 10px rgba(246, 201, 85, 0.6);
+.toggle + .toggle {
+  border-top: 1px solid rgba(138, 100, 39, 0.3);
+}
+
+.toggle:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.toggle-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toggle-label {
+  font-weight: 700;
+}
+
+.toggle-note {
+  font-size: 0.88rem;
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+.switch {
+  flex: none;
+  position: relative;
+  width: 50px;
+  height: 30px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: background 0.15s;
+}
+
+.switch .knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transition:
+    left 0.15s,
+    background 0.15s;
+}
+
+.switch.on {
+  background: linear-gradient(#fbe08a, #d2952a);
+}
+
+.switch.on .knob {
+  left: 23px;
+  background: var(--ink);
+}
+
+.pause-btn {
+  white-space: nowrap;
 }
 
 .join {

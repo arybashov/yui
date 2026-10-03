@@ -29,8 +29,21 @@ export interface Dict {
 
   yourName: string;
   defaultName: string;
-  soundTurnOn: string;
-  soundTurnOff: string;
+  /** экран настроек — как в «Городках»: строки-переключатели с пояснением */
+  settings: string;
+  soundLabel: string;
+  soundNote: string;
+  hapticsLabel: string;
+  hapticsNote: string;
+  /** переключатель «интерфейс на английском»; подпись — на текущем языке интерфейса */
+  langLabel: string;
+  langNote: string;
+  howToPlay: string;
+  done: string;
+  /** меню паузы во время партии */
+  pause: string;
+  paused: string;
+  resume: string;
 
   vsBots: string;
   opponents: string;

@@ -53,7 +53,7 @@ export function App() {
   const localSession = screen.kind === 'local' ? screen.session : null;
   useEffect(() => {
     if (!localSession) return;
-    return platformPause.subscribe(({ paused }) => localSession.setPaused(paused));
+    return platformPause.subscribe(({ paused }) => localSession.pauseFor('platform', paused));
   }, [localSession]);
 
   const toMenu = () => {

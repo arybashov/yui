@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { chooseLang } from './i18n';
 import { gameReady, initPlatform, platformPause } from './platform/yandex';
 import { preloadCards } from './ui/CardView';
 import { setSoundSilenced } from './ui/sound';
@@ -38,6 +39,21 @@ async function start(): Promise<void> {
   await initPlatform();
   watchFocus();
   blockContextMenu();
+
+  // Только на dev-сервере: постановочные кадры для скриншотов каталога (scripts/store-shots.mjs).
+  // В продакшен-сборке import.meta.env.DEV = false, и этот код вместе с модулем вырезается.
+  if (import.meta.env.DEV) {
+    const params = new URLSearchParams(location.search);
+    const lang = params.get('lang');
+    if (lang === 'ru' || lang === 'en') chooseLang(lang);
+    const shot = params.get('shot');
+    if (shot) {
+      const { ShotScene } = await import('./dev/shots');
+      createRoot(document.getElementById('root')!).render(<ShotScene name={shot} />);
+      await preloadCards();
+      return;
+    }
+  }
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

@@ -38,6 +38,14 @@ let gameplayActive = false;
 /** Площадка просит поставить игру на паузу: реклама, другая вкладка, свёрнутое окно. */
 export const platformPause = new Store<{ paused: boolean }>({ paused: false });
 
+// Две независимые причины — сигнал SDK и показ нашей рекламы: конец одной не снимает другую.
+let sdkPaused = false;
+let adShowing = false;
+const updatePause = () => {
+  const paused = sdkPaused || adShowing;
+  if (platformPause.get().paused !== paused) platformPause.set({ paused });
+};
+
 export async function initPlatform(): Promise<void> {
   if (!IS_YANDEX || !window.YaGames) return;
   try {
@@ -51,8 +59,14 @@ export async function initPlatform(): Promise<void> {
   }
   if (!sdk) return;
   setPlatformLang(sdk.environment.i18n.lang);
-  sdk.on('game_api_pause', () => platformPause.set({ paused: true }));
-  sdk.on('game_api_resume', () => platformPause.set({ paused: false }));
+  sdk.on('game_api_pause', () => {
+    sdkPaused = true;
+    updatePause();
+  });
+  sdk.on('game_api_resume', () => {
+    sdkPaused = false;
+    updatePause();
+  });
 }
 
 /** Игра загрузилась и готова к действиям игрока. */
@@ -73,13 +87,23 @@ export function showInterstitial(): Promise<void> {
   if (!sdk) return Promise.resolve();
   const adv = sdk.adv;
   return new Promise((resolve) => {
-    const timer = setTimeout(resolve, AD_TIMEOUT_MS);
+    // Как в «Городках»: на время рекламы звук и боты стоят, даже если SDK не прислал паузу.
+    let finished = false;
     const done = () => {
+      if (finished) return;
+      finished = true;
       clearTimeout(timer);
+      adShowing = false;
+      updatePause();
       resolve();
     };
+    const timer = setTimeout(done, AD_TIMEOUT_MS);
+    const opened = () => {
+      adShowing = true;
+      updatePause();
+    };
     try {
-      adv.showFullscreenAdv({ callbacks: { onClose: done, onError: done } });
+      adv.showFullscreenAdv({ callbacks: { onOpen: opened, onClose: done, onError: done } });
     } catch {
       done();
     }

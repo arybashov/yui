@@ -16,3 +16,11 @@ art/logs/
 # статистика сервера (локальные запуски)
 stats.json
 stats.json.tmp
+
+# временные файлы записи видео для каталога
+promo/yandex/.video-tmp/
+
+# пакет для Яндекса: скриншоты и видео воспроизводятся scripts/store-shots.mjs
+promo/yandex/upload/screen_*.png
+promo/yandex/upload/mobile_*.png
+promo/yandex/upload/video_*.mp4

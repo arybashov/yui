@@ -38,7 +38,12 @@ export interface Session {
   move(move: Move): void;
   newDeal(): void;
   leave(): void;
+  /** Остановить или продолжить ботов. Есть только там, где партию ведёт этот браузер. */
+  pauseFor?(reason: PauseReason, on: boolean): void;
 }
+
+/** Почему партия на паузе: игрок открыл меню или площадка попросила (реклама, свёрнутое окно). */
+export type PauseReason = 'menu' | 'platform';
 
 export interface HostSeat {
   name: string;
@@ -68,7 +73,7 @@ export class HostSession implements Session {
   private dealNo = 1;
   private listeners = new Set<(view: PlayerView) => void>();
   private botTimer: ReturnType<typeof setTimeout> | null = null;
-  private paused = false;
+  private pauses = new Set<PauseReason>();
   private readonly localSeat: number;
   private ownerSeat: number;
   // для аналитики: когда началась текущая раздача и сколько ходов сделал каждый игрок
@@ -135,9 +140,10 @@ export class HostSession implements Session {
     this.broadcast();
   }
 
-  /** Пауза по просьбе площадки (реклама, свёрнутое окно): боты не ходят, пока она не снята. */
-  setPaused(paused: boolean): void {
-    this.paused = paused;
+  /** Боты стоят, пока есть хоть одна причина паузы: закрытие меню не снимает паузу площадки. */
+  pauseFor(reason: PauseReason, on: boolean): void {
+    if (on) this.pauses.add(reason);
+    else this.pauses.delete(reason);
     this.scheduleBot();
   }
 
@@ -244,7 +250,7 @@ export class HostSession implements Session {
     if (this.botTimer) clearTimeout(this.botTimer);
     this.botTimer = null;
     const { state } = this;
-    if (this.paused || state.phase !== 'playing' || this.seats[state.turn].kind !== 'bot') return;
+    if (this.pauses.size > 0 || state.phase !== 'playing' || this.seats[state.turn].kind !== 'bot') return;
     const seat = state.turn;
     this.botTimer = setTimeout(() => {
       this.botTimer = null;

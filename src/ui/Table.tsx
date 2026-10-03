@@ -6,9 +6,9 @@ import { useT } from '../i18n';
 import { markGameplay, showInterstitial } from '../platform/yandex';
 import { useCardAnimations } from './animations';
 import { CardBack, CardView } from './CardView';
-import { Rules } from './Rules';
 import { playSound } from './sound';
-import { SoundToggle } from './SoundToggle';
+import { Settings } from './Settings';
+import { vibrate } from './haptics';
 import { describeAction, playerName, rankLabel } from './text';
 
 interface TableProps {
@@ -34,7 +34,8 @@ const PILE_TOP = 3;
 export function Table({ session, onExit, notice, coach }: TableProps) {
   const t = useT();
   const [view, setView] = useState<PlayerView | null>(null);
-  const [showRules, setShowRules] = useState(false);
+  /** меню паузы и экран настроек — как в «Городках» */
+  const [menu, setMenu] = useState<'closed' | 'pause' | 'settings'>('closed');
 
   const previous = useRef<PlayerView | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -50,8 +51,16 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
 
   useCardAnimations(tableRef, view, tutorial);
 
+  // Пока открыто меню паузы, боты не ходят — как пауза в «Городках». В сетевой игре
+  // партию ведёт сервер, и меню просто закрывает стол, не останавливая соперников.
+  const menuOpen = menu !== 'closed';
+  useEffect(() => {
+    session.pauseFor?.('menu', menuOpen);
+  }, [session, menuOpen]);
+  useEffect(() => () => session.pauseFor?.('menu', false), [session]);
+
   // Площадке сообщаем, идёт ли игровой процесс: раздача без открытых поверх неё окон.
-  const inPlay = view?.phase === 'playing' && !showRules && !notice;
+  const inPlay = view?.phase === 'playing' && !notice && menu === 'closed';
   useEffect(() => {
     markGameplay(inPlay);
   }, [inPlay]);
@@ -113,18 +122,9 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
           </span>
         )}
         <span className="spacer" />
-        <SoundToggle />
-        <button
-          type="button"
-          className="btn icon"
-          aria-label={t.rules}
-          title={t.rules}
-          onClick={() => setShowRules(true)}
-        >
-          ?
-        </button>
-        <button type="button" className="btn small" onClick={onExit}>
-          {t.exit}
+        <button type="button" className="btn small pause-btn" onClick={() => setMenu('pause')}>
+          <span aria-hidden="true">❚❚ </span>
+          {t.pause}
         </button>
       </header>
 
@@ -201,7 +201,23 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
           </div>
         </div>
       )}
-      {showRules && <Rules onClose={() => setShowRules(false)} />}
+      {menu === 'pause' && (
+        <div className="overlay" onClick={() => setMenu('closed')}>
+          <div className="panel pause-menu" role="dialog" aria-label={t.paused} onClick={(e) => e.stopPropagation()}>
+            <h2>{t.paused}</h2>
+            <button type="button" className="btn primary wide" onClick={() => setMenu('closed')}>
+              {t.resume}
+            </button>
+            <button type="button" className="btn wide" onClick={() => setMenu('settings')}>
+              {t.settings}
+            </button>
+            <button type="button" className="btn wide" onClick={onExit}>
+              {t.toMenu}
+            </button>
+          </div>
+        </div>
+      )}
+      {menu === 'settings' && <Settings onClose={() => setMenu('pause')} />}
     </div>
   );
 }
@@ -217,7 +233,10 @@ function playViewSounds(before: PlayerView | null, view: PlayerView, tutorial: b
     // новая раздача; в обучении это просто смена позиции, там тихо
     if (tutorial) return;
     playSound('deal');
-    if (myTurn) playSound('turn', { delay: 0.5 });
+    if (myTurn) {
+      playSound('turn', { delay: 0.5 });
+      vibrate(40);
+    }
     return;
   }
 
@@ -235,6 +254,7 @@ function playViewSounds(before: PlayerView | null, view: PlayerView, tutorial: b
     playSound(result, { delay: 0.4 });
   } else if (myTurn && !tutorial) {
     playSound('turn', { delay: TURN_SOUND_DELAY });
+    vibrate(40);
   }
 }
 

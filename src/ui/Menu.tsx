@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { GAME_TITLE } from '../config';
 import { BotLevel } from '../game/bot';
 import { MAX_PLAYERS } from '../game/engine';
-import { Dict, LANGS, Lang, chooseLang, langName, useLang, useT } from '../i18n';
+import { Dict, useT } from '../i18n';
 import { normalizeRoomCode } from '../net/protocol';
 import { Rules } from './Rules';
-import { SoundToggle } from './SoundToggle';
+import { Settings } from './Settings';
 
 interface MenuProps {
   name: string;
@@ -24,51 +24,6 @@ export const botLevels = (t: Dict): { id: BotLevel; label: string }[] => [
   { id: 'normal', label: t.botNormal },
 ];
 
-/** Флаги нарисованы картинками: эмодзи-флаги на Windows показываются буквами. */
-const FLAGS: Record<Lang, React.ReactNode> = {
-  ru: (
-    <svg viewBox="0 0 9 6" preserveAspectRatio="none" aria-hidden="true">
-      <rect width="9" height="2" fill="#fff" />
-      <rect y="2" width="9" height="2" fill="#0039a6" />
-      <rect y="4" width="9" height="2" fill="#d52b1e" />
-    </svg>
-  ),
-  en: (
-    <svg viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <clipPath id="flag-en-quarters">
-        <path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z" />
-      </clipPath>
-      <path d="M0,0 v30 h60 v-30 z" fill="#012169" />
-      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6" />
-      <path d="M0,0 L60,30 M60,0 L0,30" clipPath="url(#flag-en-quarters)" stroke="#c8102e" strokeWidth="4" />
-      <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10" />
-      <path d="M30,0 v30 M0,15 h60" stroke="#c8102e" strokeWidth="6" />
-    </svg>
-  ),
-};
-
-/** Выбор языка флагами: площадка не допускает в интерфейсе текст на другом языке,
- *  а флаг понятен, даже если текущий язык игроку незнаком. */
-function LanguageSwitch() {
-  const lang = useLang();
-  return (
-    <div className="flags">
-      {LANGS.map((code) => (
-        <button
-          key={code}
-          type="button"
-          className={`flag ${code === lang ? 'on' : ''}`}
-          aria-label={langName(code)}
-          aria-pressed={code === lang}
-          onClick={() => chooseLang(code)}
-        >
-          {FLAGS[code]}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export function Menu({
   name,
   onNameChange,
@@ -84,16 +39,23 @@ export function Menu({
   const [level, setLevel] = useState<BotLevel>('normal');
   const [code, setCode] = useState(initialCode);
   const [showRules, setShowRules] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <div className="screen">
       <div className="menu-head">
-        <div className="menu-side">
-          <SoundToggle />
-        </div>
+        <div className="menu-side" />
         <h1 className="title">{GAME_TITLE}</h1>
         <div className="menu-side end">
-          <LanguageSwitch />
+          <button
+            type="button"
+            className="btn icon"
+            aria-label={t.settings}
+            title={t.settings}
+            onClick={() => setShowSettings(true)}
+          >
+            <GearIcon />
+          </button>
         </div>
       </div>
       <p className="muted subtitle">{t.subtitle}</p>
@@ -185,6 +147,16 @@ export function Menu({
       </div>
 
       {showRules && <Rules onClose={() => setShowRules(false)} />}
+      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
     </div>
+  );
+}
+
+/** Шестерёнка — общепонятный значок настроек, его находят без знания языка (требование 6.9). */
+export function GearIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+      <path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.4 7.4 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5a.5.5 0 0 0 .6.2l2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6a.5.5 0 0 0 .5.4h4a.5.5 0 0 0 .5-.4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1a.5.5 0 0 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
+    </svg>
   );
 }
