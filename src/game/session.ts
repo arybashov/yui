@@ -71,6 +71,9 @@ export class HostSession implements Session {
   private paused = false;
   private readonly localSeat: number;
   private ownerSeat: number;
+  // для аналитики: когда началась текущая раздача и сколько ходов сделал каждый игрок
+  private dealStartedAt = Date.now();
+  private actions: number[];
 
   constructor(
     private seats: HostSeat[],
@@ -79,6 +82,7 @@ export class HostSession implements Session {
     this.localSeat = seats.findIndex((s) => s.kind === 'local');
     this.ownerSeat = options.ownerSeat ?? this.localSeat;
     this.losses = seats.map(() => 0);
+    this.actions = seats.map(() => 0);
     this.state = deal(seats.length);
   }
 
@@ -103,6 +107,7 @@ export class HostSession implements Session {
     } catch {
       return;
     }
+    this.actions[seat]++;
     if (this.state.phase === 'over' && this.state.loser !== null) {
       this.losses[this.state.loser]++;
     }
@@ -117,6 +122,8 @@ export class HostSession implements Session {
     }
     this.state = deal(this.seats.length);
     this.dealNo++;
+    this.actions = this.seats.map(() => 0);
+    this.dealStartedAt = Date.now();
     this.broadcast();
   }
 
@@ -150,22 +157,32 @@ export class HostSession implements Session {
     this.broadcast();
   }
 
-  /** Сводка партии для админки: без карт на руках, только состояние и игроки. */
+  /** Сводка партии для админки: без карт на руках, только состояние, игроки и аналитика. */
   snapshot(): {
     phase: GameState['phase'];
     dealNo: number;
-    players: { name: string; isBot: boolean; away: boolean; count: number; place: number | null }[];
+    startedAt: number;
+    players: {
+      name: string;
+      isBot: boolean;
+      away: boolean;
+      count: number;
+      place: number | null;
+      actions: number;
+    }[];
   } {
     const { state } = this;
     return {
       phase: state.phase,
       dealNo: this.dealNo,
+      startedAt: this.dealStartedAt,
       players: this.seats.map((seat, i) => ({
         name: seat.human ?? seat.name,
         isBot: seat.kind === 'bot',
         away: seat.human !== undefined,
         count: state.hands[i].length,
         place: state.finished.includes(i) ? state.finished.indexOf(i) + 1 : null,
+        actions: this.actions[i],
       })),
     };
   }

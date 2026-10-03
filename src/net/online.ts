@@ -3,6 +3,7 @@ import { Move } from '../game/engine';
 import { PlayerView, Session } from '../game/session';
 import { NetError } from '../i18n/types';
 import { Store } from '../store';
+import { clientMeta } from './identity';
 import { ClientMessage, ServerMessage } from './protocol';
 
 /** Адрес игрового сервера. Пусто — онлайн идёт напрямую между браузерами (см. room.ts). */
@@ -51,12 +52,25 @@ export class OnlineRoom implements Session {
     const socket = new WebSocket(this.url);
     this.socket = socket;
     socket.onopen = () => {
-      if (this.token) this.send({ t: 'rejoin', code: this.state.get().code, token: this.token });
-      else if ('create' in this.entry) this.send({ t: 'create', name: this.entry.name });
-      else this.send({ t: 'join', code: this.entry.code, name: this.entry.name });
+      const meta = clientMeta();
+      if (this.token) this.send({ t: 'rejoin', code: this.state.get().code, token: this.token, ...meta });
+      else if ('create' in this.entry) this.send({ t: 'create', name: this.entry.name, ...meta });
+      else this.send({ t: 'join', code: this.entry.code, name: this.entry.name, ...meta });
+      this.reportVisibility();
     };
     socket.onmessage = (event) => this.onMessage(JSON.parse(String(event.data)) as ServerMessage);
     socket.onclose = () => this.onClose(socket);
+  }
+
+  /** Сообщать серверу, видна ли вкладка, — для честного учёта времени в игре. */
+  private visibilityHandler = () => this.reportVisibility();
+  private visibilityBound = false;
+  private reportVisibility(): void {
+    this.send({ t: 'visible', visible: document.visibilityState === 'visible' });
+    if (!this.visibilityBound) {
+      document.addEventListener('visibilitychange', this.visibilityHandler);
+      this.visibilityBound = true;
+    }
   }
 
   private send(message: ClientMessage): void {
@@ -122,6 +136,7 @@ export class OnlineRoom implements Session {
   leave(): void {
     this.finished = true;
     if (this.retryTimer) clearTimeout(this.retryTimer);
+    if (this.visibilityBound) document.removeEventListener('visibilitychange', this.visibilityHandler);
     this.listeners.clear();
     this.socket?.close();
   }

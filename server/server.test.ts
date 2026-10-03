@@ -1,5 +1,7 @@
 import { once } from 'node:events';
 import { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 import { PlayerView } from '../src/game/session';
@@ -80,7 +82,12 @@ describe('игровой сервер', () => {
   };
 
   beforeEach(async () => {
-    server = startServer({ port: 0, botDelayMs: 5, emptyRoomTtlMs: 50 });
+    server = startServer({
+      port: 0,
+      botDelayMs: 5,
+      emptyRoomTtlMs: 50,
+      statsFile: join(tmpdir(), `yui-stats-${process.pid}-${Date.now()}.json`),
+    });
     await once(server.http, 'listening');
     url = `ws://127.0.0.1:${(server.http.address() as AddressInfo).port}`;
   });

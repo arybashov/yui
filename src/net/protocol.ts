@@ -5,14 +5,26 @@ import { NetError } from '../i18n/types';
 
 // Сообщения между браузером и игровым сервером (JSON поверх WebSocket).
 
+/** Данные для аналитики, которые клиент прикладывает при входе (необязательные). */
+export interface ClientMeta {
+  /** анонимный идентификатор посетителя (из localStorage), не аккаунт */
+  visitorId?: string;
+  /** площадка: site (сайт), yandex (Яндекс Игры), local (разработка) */
+  platform?: string;
+  /** версия клиента */
+  version?: string;
+}
+
 export type ClientMessage =
-  | { t: 'create'; name: string }
-  | { t: 'join'; code: string; name: string }
+  | ({ t: 'create'; name: string } & ClientMeta)
+  | ({ t: 'join'; code: string; name: string } & ClientMeta)
   /** возврат в идущую партию после обрыва связи */
-  | { t: 'rejoin'; code: string; token: string }
+  | ({ t: 'rejoin'; code: string; token: string } & ClientMeta)
   | { t: 'start'; bots: number; level: BotLevel }
   | { t: 'move'; move: Move }
-  | { t: 'newDeal' };
+  | { t: 'newDeal' }
+  /** вкладка видима/скрыта — для учёта времени в игре */
+  | { t: 'visible'; visible: boolean };
 
 export type ServerMessage =
   /** игрок принят в комнату; token нужен для возврата после обрыва */

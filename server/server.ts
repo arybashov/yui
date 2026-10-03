@@ -11,9 +11,12 @@ import {
   makeRoomCode,
   normalizeRoomCode,
 } from '../src/net/protocol';
+import { createGeoLookup, clientIp } from './geo';
+import { Platform, analyticsIdentity, createStats, platformOf } from './stats';
 
 // Игровой сервер: держит комнаты и сам ведёт партии, поэтому игра не зависит
 // от вкладки одного из игроков. Правила — те же модули, что и в браузере.
+// Плюс сбор статистики в формате админки RRaM (см. stats.ts).
 
 export interface ServerOptions {
   port: number;
@@ -22,12 +25,19 @@ export interface ServerOptions {
   botDelayMs?: number;
   /** сколько живёт комната, в которой не осталось подключённых игроков */
   emptyRoomTtlMs?: number;
+  /** файл со статистикой (JSON) */
+  statsFile?: string;
+  /** каталог с данными ip2country (gz) для определения стран */
+  geoDir?: string;
+  pulseMs?: number;
 }
 
 interface Member {
   name: string;
   token: string;
   socket: WebSocket | null;
+  visitorId: string;
+  platform: Platform;
 }
 
 interface Room {
@@ -35,14 +45,29 @@ interface Room {
   members: Member[];
   session: HostSession | null;
   cleanup: ReturnType<typeof setTimeout> | null;
+  createdAt: number;
+  startedAt: number | null;
+}
+
+/** Данные соединения для диагностики и аналитики. */
+interface Conn {
+  ip: string;
+  country: string;
+  visitorId: string;
+  platform: Platform;
+  version: string;
+  visible: boolean;
+  connectedAt: number;
+  lastSeen: number;
+  room: Room | null;
+  member: Member | null;
 }
 
 const MAX_ROOMS = 500;
 const MAX_MESSAGE_BYTES = 4096;
 const PING_INTERVAL_MS = 30000;
+const DEFAULT_PULSE_MS = 20000;
 
-// Админ-данные отдаются под тем же логином/паролем, что админка RRaM, — чтобы
-// не плодить отдельную учётку. Без ADMIN_PASSWORD эндпоинт закрыт (503).
 const ADMIN_USER = process.env.ADMIN_USER ?? 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? '';
 
@@ -87,37 +112,80 @@ function parseMove(raw: unknown): Move | null {
 
 export function startServer(options: ServerOptions): { http: Server; close: () => Promise<void> } {
   const rooms = new Map<string, Room>();
-  /** в какой комнате и на каком месте сидит каждое соединение */
+  /** в какой комнате и на каком месте сидит каждое соединение (для маршрутизации) */
   const seats = new Map<WebSocket, { room: Room; member: Member }>();
+  /** все соединения — для диагностики и аналитики */
+  const conns = new Map<WebSocket, Conn>();
   const emptyRoomTtlMs = options.emptyRoomTtlMs ?? 10 * 60 * 1000;
 
-  // Сводка для админки: комнаты, игроки, идёт ли партия. Без чужих личных данных
-  // и без карт на руках — только то, что нужно для диагностики.
-  const adminData = () => ({
-    game: 'yui',
-    now: Date.now(),
-    uptimeSec: Math.round(process.uptime()),
-    counts: {
-      rooms: rooms.size,
-      connections: seats.size,
-      playing: [...rooms.values()].filter((r) => r.session).length,
-      lobby: [...rooms.values()].filter((r) => !r.session).length,
-    },
-    rooms: [...rooms.values()].map((room) => ({
-      code: room.code,
-      started: Boolean(room.session),
-      members: room.members.map((m) => ({ name: m.name, connected: m.socket !== null })),
-      game: room.session?.snapshot() ?? null,
-    })),
-  });
+  const geo = createGeoLookup(options.geoDir ?? process.env.GEO_DIR);
+  const stats = createStats(options.statsFile ?? process.env.STATS_FILE ?? `${process.cwd()}/stats.json`);
+
+  /** режим комнаты: двое и больше людей — pvp, иначе игра против ботов */
+  const roomMode = (room: Room): 'pvp' | 'ai' => (room.members.length >= 2 ? 'pvp' : 'ai');
+
+  // ---------- админские данные в формате RRaM ----------
+
+  const adminData = () => {
+    const now = Date.now();
+    const clients = [...conns.values()].map((c) => ({
+      id: (c.visitorId || '').slice(0, 8) || '—',
+      ip: c.ip || '?',
+      version: c.version || '?',
+      ua: '',
+      device: '—',
+      connectedSec: Math.round((now - c.connectedAt) / 1000),
+      idleSec: Math.round((now - c.lastSeen) / 1000),
+      rtt: null,
+      state: c.room?.session ? 'в игре' : c.room ? 'лобби' : 'подключён',
+      roomCode: c.room?.code ?? null,
+      name: c.member?.name ?? null,
+      side: null,
+    }));
+    clients.sort((a, b) => b.connectedSec - a.connectedSec);
+    const roomList = [...rooms.values()].map((room) => {
+      const snap = room.session?.snapshot();
+      const players = snap
+        ? snap.players.map((p) => ({ name: p.name, isBot: p.isBot && !p.away, connected: !p.isBot }))
+        : room.members.map((m) => ({ name: m.name, isBot: false, connected: m.socket !== null }));
+      return {
+        code: room.code,
+        createdAt: room.createdAt,
+        startedAt: room.startedAt,
+        players,
+        game: snap ? { over: snap.phase === 'over' } : null,
+        status: 'active',
+        type: 'private',
+        emptySince: room.cleanup ? now : null,
+      };
+    });
+    return {
+      now,
+      serverVersion: 'yui',
+      uptimeSec: Math.round(process.uptime()),
+      counts: {
+        clients: conns.size,
+        rooms: rooms.size,
+        playing: roomList.filter((r) => r.game && r.players.some((p) => !p.isBot && p.connected)).length,
+        saved: 0,
+        waitingOnline: [...rooms.values()].filter((r) => !r.session && r.members.some((m) => m.socket))
+          .length,
+        waitingOffline: 0,
+        lobbyWatchers: 0,
+      },
+      clients,
+      rooms: roomList,
+    };
+  };
 
   const http = createServer((request, response) => {
-    if (request.url === '/health') {
+    const url = request.url ?? '';
+    if (url === '/health') {
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ ok: true, rooms: rooms.size }));
       return;
     }
-    if (request.url === '/admin/data') {
+    if (url === '/admin/data' || url.startsWith('/admin/stats')) {
       if (!ADMIN_PASSWORD) {
         response.writeHead(503, { 'content-type': 'application/json' });
         response.end(JSON.stringify({ error: 'admin_not_configured' }));
@@ -128,8 +196,18 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
         response.end();
         return;
       }
+      let body: unknown;
+      if (url === '/admin/data') {
+        body = adminData();
+      } else {
+        const q = new URL(url, 'http://localhost').searchParams;
+        body = {
+          ...stats.summary(q.get('days'), q.get('platform'), q.get('mode')),
+          geo: { available: geo.available, updatedAt: geo.updatedAt },
+        };
+      }
       response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-      response.end(JSON.stringify(adminData()));
+      response.end(JSON.stringify(body));
       return;
     }
     response.writeHead(404);
@@ -142,13 +220,32 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     room.members.forEach((member, you) => send(member.socket, { t: 'lobby', names, you, owner: 0 }));
   };
 
-  /** Владелец партии — первый игрок, у которого есть связь: он запускает новые раздачи. */
   const syncOwner = (room: Room) => {
     const owner = room.members.findIndex((m) => m.socket !== null);
     if (owner >= 0) room.session?.setOwner(owner);
   };
 
+  /** Записать текущую раздачу комнаты в статистику (идемпотентно). */
+  const recordRoom = (room: Room, time = Date.now()) => {
+    const snap = room.session?.snapshot();
+    if (!snap || !snap.startedAt) return;
+    stats.recordDeal({
+      id: `${room.code}#${snap.dealNo}`,
+      started: snap.startedAt,
+      finished: snap.phase === 'over' ? time : null,
+      lastActivity: time,
+      mode: roomMode(room),
+      participants: room.members.map((m, seat) => ({
+        player: seat,
+        person: analyticsIdentity(m.visitorId),
+        platform: m.platform,
+        actions: snap.players[seat]?.actions ?? 0,
+      })),
+    });
+  };
+
   const dropRoom = (room: Room) => {
+    recordRoom(room);
     if (room.cleanup) clearTimeout(room.cleanup);
     room.session?.leave();
     room.members.forEach((member) => member.socket && seats.delete(member.socket));
@@ -156,14 +253,43 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
   };
 
   const enter = (socket: WebSocket, room: Room, name: string) => {
-    const member: Member = { name, token: randomBytes(16).toString('hex'), socket };
+    const conn = conns.get(socket);
+    const member: Member = {
+      name,
+      token: randomBytes(16).toString('hex'),
+      socket,
+      visitorId: conn?.visitorId ?? '',
+      platform: conn?.platform ?? 'unknown',
+    };
     room.members.push(member);
     seats.set(socket, { room, member });
+    if (conn) {
+      conn.room = room;
+      conn.member = member;
+    }
     send(socket, { t: 'joined', code: room.code, token: member.token });
     syncLobby(room);
   };
 
+  /** Обновить идентификацию соединения из входящего сообщения. */
+  const applyMeta = (conn: Conn | undefined, m: ClientMessage) => {
+    if (!conn || (m.t !== 'create' && m.t !== 'join' && m.t !== 'rejoin')) return;
+    if (typeof m.visitorId === 'string' && m.visitorId.length <= 64) conn.visitorId = m.visitorId;
+    const p = platformOf(m.platform);
+    if (p !== 'unknown') conn.platform = p;
+    if (typeof m.version === 'string') conn.version = m.version.slice(0, 20);
+  };
+
   const onMessage = (socket: WebSocket, message: ClientMessage) => {
+    const conn = conns.get(socket);
+    if (conn) conn.lastSeen = Date.now();
+    applyMeta(conn, message);
+
+    if (message.t === 'visible') {
+      if (conn) conn.visible = Boolean(message.visible);
+      return;
+    }
+
     const seat = seats.get(socket);
 
     if (message.t === 'create') {
@@ -171,7 +297,14 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       if (rooms.size >= MAX_ROOMS) return send(socket, { t: 'error', code: 'server-full' });
       let code = makeRoomCode();
       while (rooms.has(code)) code = makeRoomCode();
-      const room: Room = { code, members: [], session: null, cleanup: null };
+      const room: Room = {
+        code,
+        members: [],
+        session: null,
+        cleanup: null,
+        createdAt: Date.now(),
+        startedAt: null,
+      };
       rooms.set(code, room);
       enter(socket, room, cleanName(message.name));
       return;
@@ -196,12 +329,17 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       }
       const member = room.members[index];
       if (member.socket) {
-        // прежнее соединение ещё не закрылось — заменяем его новым
         seats.delete(member.socket);
         member.socket.close();
       }
       member.socket = socket;
       seats.set(socket, { room, member });
+      if (conn) {
+        conn.room = room;
+        conn.member = member;
+        if (conn.visitorId) member.visitorId = conn.visitorId;
+        if (conn.platform !== 'unknown') member.platform = conn.platform;
+      }
       if (room.cleanup) clearTimeout(room.cleanup);
       room.cleanup = null;
       send(socket, { t: 'joined', code: room.code, token: member.token });
@@ -234,30 +372,35 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
         botDelayMs: options.botDelayMs,
         ownerSeat: 0,
       });
+      room.startedAt = Date.now();
       room.session.start();
+      recordRoom(room);
     } else if (message.t === 'move') {
       const move = parseMove(message.move);
-      if (move) room.session?.handleMove(index, move);
+      if (move) {
+        room.session?.handleMove(index, move);
+        recordRoom(room);
+      }
     } else if (message.t === 'newDeal') {
       room.session?.requestNewDeal(index);
+      recordRoom(room);
     }
   };
 
   const onClose = (socket: WebSocket) => {
+    conns.delete(socket);
     const seat = seats.get(socket);
     if (!seat) return;
     seats.delete(socket);
     const { room, member } = seat;
 
     if (!room.session) {
-      // в лобби место просто освобождается
       room.members.splice(room.members.indexOf(member), 1);
       if (room.members.length === 0) dropRoom(room);
       else syncLobby(room);
       return;
     }
 
-    // в партии за игрока доигрывает бот, а место ждёт его возвращения
     member.socket = null;
     room.session.detach(room.members.indexOf(member));
     if (room.members.some((m) => m.socket !== null)) {
@@ -268,9 +411,29 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
   };
 
   const alive = new WeakSet<WebSocket>();
-  wss.on('connection', (socket) => {
+  wss.on('connection', (socket, request) => {
+    const remote = request.socket.remoteAddress ?? '';
+    const xReal = request.headers['x-real-ip'];
+    const ip = clientIp(remote, Array.isArray(xReal) ? xReal[0] : xReal);
+    const now = Date.now();
+    conns.set(socket, {
+      ip,
+      country: geo.lookup(ip),
+      visitorId: '',
+      platform: 'unknown',
+      version: '',
+      visible: true,
+      connectedAt: now,
+      lastSeen: now,
+      room: null,
+      member: null,
+    });
     alive.add(socket);
-    socket.on('pong', () => alive.add(socket));
+    socket.on('pong', () => {
+      alive.add(socket);
+      const c = conns.get(socket);
+      if (c) c.lastSeen = Date.now();
+    });
     socket.on('message', (data) => {
       try {
         onMessage(socket, JSON.parse(String(data)) as ClientMessage);
@@ -282,7 +445,6 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     socket.on('error', () => socket.terminate());
   });
 
-  // закрываем соединения, которые перестали отвечать: иначе место «зависает»
   const pinger = setInterval(() => {
     wss.clients.forEach((socket) => {
       if (!alive.has(socket)) return socket.terminate();
@@ -291,6 +453,40 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     });
   }, PING_INTERVAL_MS);
 
+  // Пульс аналитики: учёт времени/посетителей и дозапись идущих партий.
+  const pulse = setInterval(() => {
+    const time = Date.now();
+    const items = [];
+    for (const conn of conns.values()) {
+      const identity = analyticsIdentity(conn.visitorId);
+      if (!identity) continue;
+      let playing = false;
+      let engaged = false;
+      let mode: 'pvp' | 'ai' = 'pvp';
+      if (conn.room?.session && conn.member) {
+        const snap = conn.room.session.snapshot();
+        const seat = conn.room.members.indexOf(conn.member);
+        const me = snap.players[seat];
+        mode = roomMode(conn.room);
+        playing = snap.phase === 'playing' && !!me && me.place === null;
+        engaged = !!me && me.actions > 0;
+      }
+      items.push({
+        identity,
+        platform: conn.platform,
+        country: conn.country,
+        visible: conn.visible,
+        lastSeen: conn.lastSeen,
+        playing,
+        mode,
+        engaged,
+      });
+    }
+    stats.pulse(items, time);
+    for (const room of rooms.values()) if (room.session) recordRoom(room, time);
+  }, options.pulseMs ?? DEFAULT_PULSE_MS);
+  if (typeof pulse.unref === 'function') pulse.unref();
+
   http.listen(options.port, options.host);
 
   return {
@@ -298,7 +494,10 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     close: () =>
       new Promise((resolve) => {
         clearInterval(pinger);
+        clearInterval(pulse);
         [...rooms.values()].forEach(dropRoom);
+        stats.flush();
+        stats.stop();
         wss.clients.forEach((socket) => socket.terminate());
         wss.close(() => http.close(() => resolve()));
       }),
