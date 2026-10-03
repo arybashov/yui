@@ -67,7 +67,7 @@ curl -fsSL https://raw.githubusercontent.com/arybashov/yui/main/deploy/deploy.sh
 ## Яндекс Игры
 
 ```bash
-npm run build:yandex   # сборка в dist-yandex/ и архив yui-yandex.zip для Консоли разработчика
+npm run release:yandex   # новый номер сборки → release/YUI_yandex_v1.0.N.zip для Консоли разработчика
 ```
 
 В этой сборке в страницу добавлен SDK площадки (`/sdk.js`), а игра:

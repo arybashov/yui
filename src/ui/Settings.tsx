@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { APP_VERSION } from '../config';
 import { chooseLang, useLang, useT } from '../i18n';
 import { Store } from '../store';
 import { hapticsSetting, hapticsSupported, setHapticsEnabled, vibrate } from './haptics';
@@ -80,6 +81,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
         <button type="button" className="btn primary wide" onClick={onClose}>
           {t.done}
         </button>
+        <p className="muted build-tag">{t.buildTag(APP_VERSION)}</p>
       </div>
     </div>
   );

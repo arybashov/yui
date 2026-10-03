@@ -2,7 +2,6 @@ node_modules
 dist
 dist-server
 dist-yandex
-yui-yandex.zip
 *.local
 .~lock.*
 
@@ -24,3 +23,9 @@ promo/yandex/.video-tmp/
 promo/yandex/upload/screen_*.png
 promo/yandex/upload/mobile_*.png
 promo/yandex/upload/video_*.mp4
+
+# архивы релизов для Консоли (журнал releases.txt и номер сборки — в git)
+release/*.zip
+
+# архивы пакета, собранные вручную (больше лимита GitHub в 100 МБ)
+promo/yandex/*.zip

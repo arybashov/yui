@@ -29,6 +29,7 @@ export const en: Dict = {
   langNote: 'Switch the interface to English',
   howToPlay: 'How to play',
   done: 'Done',
+  buildTag: (version) => `build ${version}`,
   pause: 'Pause',
   paused: 'Paused',
   resume: 'Resume',

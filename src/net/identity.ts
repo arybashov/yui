@@ -1,3 +1,4 @@
+import { APP_VERSION } from '../config';
 import { IS_YANDEX } from '../platform/yandex';
 import { ClientMeta } from './protocol';
 
@@ -5,7 +6,6 @@ import { ClientMeta } from './protocol';
 // браузере; если localStorage недоступен — разовый на сессию.
 
 const KEY = 'yui.visitor';
-const VERSION = '1';
 
 function uuid(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -43,5 +43,5 @@ function platform(): string {
 
 /** Мета для сообщений входа: кто посетитель, с какой площадки, какая версия. */
 export function clientMeta(): ClientMeta {
-  return { visitorId: visitorId(), platform: platform(), version: VERSION };
+  return { visitorId: visitorId(), platform: platform(), version: APP_VERSION };
 }

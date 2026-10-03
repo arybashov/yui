@@ -40,6 +40,8 @@ export interface Dict {
   langNote: string;
   howToPlay: string;
   done: string;
+  /** номер сборки внизу настроек, как в «Городках» */
+  buildTag: (version: string) => string;
   /** меню паузы во время партии */
   pause: string;
   paused: string;

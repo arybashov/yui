@@ -38,6 +38,7 @@ export const ru: Dict = {
   langNote: 'Переключить интерфейс на английский',
   howToPlay: 'Как играть',
   done: 'Готово',
+  buildTag: (version) => `сборка ${version}`,
   pause: 'Пауза',
   paused: 'Пауза',
   resume: 'Продолжить',

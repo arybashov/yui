@@ -1,5 +1,18 @@
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'node:fs';
 import { Plugin, defineConfig } from 'vite';
+
+/** Версия как в «Городках»: MAJOR.MINOR из VERSION + номер сборки из release/build_number. */
+function appVersion(): string {
+  const read = (path: string) => {
+    try {
+      return readFileSync(new URL(path, import.meta.url), 'utf8').trim();
+    } catch {
+      return '';
+    }
+  };
+  return `${read('./VERSION') || '0.0'}.${read('./release/build_number') || '0'}`;
+}
 
 /** Сборка для Яндекс Игр (`--mode yandex`): площадка требует подключать её SDK тегом в <head>. */
 const yandexSdk = (mode: string): Plugin => ({
@@ -12,6 +25,7 @@ export default defineConfig(({ mode }) => ({
   // относительные пути, чтобы сборку можно было положить на любой статический хостинг
   base: './',
   plugins: [react(), yandexSdk(mode)],
+  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   // без явного адреса Vite на Windows слушает только IPv6, и http://127.0.0.1 не открывается
   server: { host: '127.0.0.1', port: 5173, strictPort: true },
 }));
