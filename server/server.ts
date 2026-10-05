@@ -30,6 +30,8 @@ export interface ServerOptions {
   /** каталог с данными ip2country (gz) для определения стран */
   geoDir?: string;
   pulseMs?: number;
+  /** быстрая игра: сколько ждать ещё соперников, когда собралось двое */
+  quickStartMs?: number;
 }
 
 interface Member {
@@ -47,6 +49,11 @@ interface Room {
   cleanup: ReturnType<typeof setTimeout> | null;
   createdAt: number;
   startedAt: number | null;
+  /** комната быстрой игры: в неё попадают незнакомые игроки, стартует сама */
+  quick: boolean;
+  /** когда быстрая игра начнётся сама (пока собралось меньше двух — null) */
+  startsAt: number | null;
+  startTimer: ReturnType<typeof setTimeout> | null;
 }
 
 /** Данные соединения для диагностики и аналитики. */
@@ -67,6 +74,9 @@ const MAX_ROOMS = 500;
 const MAX_MESSAGE_BYTES = 4096;
 const PING_INTERVAL_MS = 30000;
 const DEFAULT_PULSE_MS = 20000;
+const DEFAULT_QUICK_START_MS = 15000;
+/** новичку в быстрой игре — хотя бы столько, чтобы увидеть, с кем играет */
+const QUICK_JOIN_GRACE_MS = 5000;
 
 const ADMIN_USER = process.env.ADMIN_USER ?? 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? '';
@@ -117,6 +127,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
   /** все соединения — для диагностики и аналитики */
   const conns = new Map<WebSocket, Conn>();
   const emptyRoomTtlMs = options.emptyRoomTtlMs ?? 10 * 60 * 1000;
+  const quickStartMs = options.quickStartMs ?? DEFAULT_QUICK_START_MS;
 
   const geo = createGeoLookup(options.geoDir ?? process.env.GEO_DIR);
   const stats = createStats(options.statsFile ?? process.env.STATS_FILE ?? `${process.cwd()}/stats.json`);
@@ -155,7 +166,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
         players,
         game: snap ? { over: snap.phase === 'over' } : null,
         status: 'active',
-        type: 'private',
+        type: room.quick ? 'public' : 'private',
         emptySince: room.cleanup ? now : null,
       };
     });
@@ -171,7 +182,9 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
         waitingOnline: [...rooms.values()].filter((r) => !r.session && r.members.some((m) => m.socket))
           .length,
         waitingOffline: 0,
-        lobbyWatchers: 0,
+        lobbyWatchers: [...rooms.values()]
+          .filter((r) => r.quick && !r.session)
+          .reduce((n, r) => n + r.members.length, 0),
       },
       clients,
       rooms: roomList,
@@ -217,7 +230,88 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
 
   const syncLobby = (room: Room) => {
     const names = room.members.map((m) => m.name);
-    room.members.forEach((member, you) => send(member.socket, { t: 'lobby', names, you, owner: 0 }));
+    const extra = room.quick
+      ? {
+          quick: true,
+          startsIn: room.startsAt === null ? null : Math.max(0, room.startsAt - Date.now()),
+          online: conns.size,
+        }
+      : {};
+    room.members.forEach((member, you) => send(member.socket, { t: 'lobby', names, you, owner: 0, ...extra }));
+  };
+
+  const newRoom = (quick: boolean): Room => {
+    let code = makeRoomCode();
+    while (rooms.has(code)) code = makeRoomCode();
+    const room: Room = {
+      code,
+      members: [],
+      session: null,
+      cleanup: null,
+      createdAt: Date.now(),
+      startedAt: null,
+      quick,
+      startsAt: null,
+      startTimer: null,
+    };
+    rooms.set(code, room);
+    return room;
+  };
+
+  const cancelQuickStart = (room: Room) => {
+    if (room.startTimer) clearTimeout(room.startTimer);
+    room.startTimer = null;
+    room.startsAt = null;
+  };
+
+  const startRoom = (room: Room, bots: number, level: BotLevel) => {
+    cancelQuickStart(room);
+    const hostSeats: HostSeat[] = [
+      ...room.members.map(
+        (m): HostSeat => ({
+          name: m.name,
+          kind: 'remote',
+          send: (view) => send(m.socket, { t: 'view', view }),
+        }),
+      ),
+      ...Array.from({ length: bots }, (_, i): HostSeat => ({ name: botSeatName(i + 1), kind: 'bot' })),
+    ];
+    room.session = new HostSession(hostSeats, {
+      botLevel: level,
+      botDelayMs: options.botDelayMs,
+      ownerSeat: 0,
+    });
+    room.startedAt = Date.now();
+    room.session.start();
+    recordRoom(room);
+  };
+
+  /**
+   * Быстрая игра стартует сама: стол полон — сразу; двое и больше — через
+   * quickStartMs (вдруг подойдёт кто-то ещё); остался один — ждём дальше.
+   */
+  const scheduleQuick = (room: Room) => {
+    if (!room.quick || room.session) return;
+    const count = room.members.length;
+    if (count >= MAX_PLAYERS) {
+      startRoom(room, 0, 'normal');
+      return;
+    }
+    if (count < MIN_PLAYERS) {
+      cancelQuickStart(room);
+    } else {
+      const now = Date.now();
+      const at = room.startsAt === null ? now + quickStartMs : Math.max(room.startsAt, now + QUICK_JOIN_GRACE_MS);
+      if (at !== room.startsAt) {
+        if (room.startTimer) clearTimeout(room.startTimer);
+        room.startsAt = at;
+        room.startTimer = setTimeout(() => {
+          room.startTimer = null;
+          if (!room.session && room.members.length >= MIN_PLAYERS) startRoom(room, 0, 'normal');
+        }, at - now);
+      }
+    }
+    syncLobby(room);
   };
 
   const syncOwner = (room: Room) => {
@@ -247,6 +341,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
   const dropRoom = (room: Room) => {
     recordRoom(room);
     if (room.cleanup) clearTimeout(room.cleanup);
+    cancelQuickStart(room);
     room.session?.leave();
     room.members.forEach((member) => member.socket && seats.delete(member.socket));
     rooms.delete(room.code);
@@ -268,12 +363,13 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       conn.member = member;
     }
     send(socket, { t: 'joined', code: room.code, token: member.token });
-    syncLobby(room);
+    if (room.quick) scheduleQuick(room);
+    else syncLobby(room);
   };
 
   /** Обновить идентификацию соединения из входящего сообщения. */
   const applyMeta = (conn: Conn | undefined, m: ClientMessage) => {
-    if (!conn || (m.t !== 'create' && m.t !== 'join' && m.t !== 'rejoin')) return;
+    if (!conn || (m.t !== 'create' && m.t !== 'join' && m.t !== 'quick' && m.t !== 'rejoin')) return;
     if (typeof m.visitorId === 'string' && m.visitorId.length <= 64) conn.visitorId = m.visitorId;
     const p = platformOf(m.platform);
     if (p !== 'unknown') conn.platform = p;
@@ -295,17 +391,23 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     if (message.t === 'create') {
       if (seat) return;
       if (rooms.size >= MAX_ROOMS) return send(socket, { t: 'error', code: 'server-full' });
-      let code = makeRoomCode();
-      while (rooms.has(code)) code = makeRoomCode();
-      const room: Room = {
-        code,
-        members: [],
-        session: null,
-        cleanup: null,
-        createdAt: Date.now(),
-        startedAt: null,
-      };
-      rooms.set(code, room);
+      enter(socket, newRoom(false), cleanName(message.name));
+      return;
+    }
+
+    if (message.t === 'quick') {
+      if (seat) return;
+      // самая наполненная из ждущих — так партии собираются быстрее
+      let room: Room | null = null;
+      for (const r of rooms.values()) {
+        if (r.quick && !r.session && r.members.length < MAX_PLAYERS) {
+          if (!room || r.members.length > room.members.length) room = r;
+        }
+      }
+      if (!room) {
+        if (rooms.size >= MAX_ROOMS) return send(socket, { t: 'error', code: 'server-full' });
+        room = newRoom(true);
+      }
       enter(socket, room, cleanName(message.name));
       return;
     }
@@ -353,28 +455,11 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     const index = room.members.indexOf(member);
 
     if (message.t === 'start') {
-      if (room.session || index !== 0) return;
+      // быстрая игра стартует сама и только с людьми
+      if (room.session || room.quick || index !== 0) return;
       const bots = Math.max(0, Math.min(Number(message.bots) || 0, MAX_PLAYERS - room.members.length));
       if (room.members.length + bots < MIN_PLAYERS) return;
-      const level: BotLevel = message.level === 'easy' ? 'easy' : 'normal';
-      const hostSeats: HostSeat[] = [
-        ...room.members.map(
-          (m): HostSeat => ({
-            name: m.name,
-            kind: 'remote',
-            send: (view) => send(m.socket, { t: 'view', view }),
-          }),
-        ),
-        ...Array.from({ length: bots }, (_, i): HostSeat => ({ name: botSeatName(i + 1), kind: 'bot' })),
-      ];
-      room.session = new HostSession(hostSeats, {
-        botLevel: level,
-        botDelayMs: options.botDelayMs,
-        ownerSeat: 0,
-      });
-      room.startedAt = Date.now();
-      room.session.start();
-      recordRoom(room);
+      startRoom(room, bots, message.level === 'easy' ? 'easy' : 'normal');
     } else if (message.t === 'move') {
       const move = parseMove(message.move);
       if (move) {
@@ -397,6 +482,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     if (!room.session) {
       room.members.splice(room.members.indexOf(member), 1);
       if (room.members.length === 0) dropRoom(room);
+      else if (room.quick) scheduleQuick(room);
       else syncLobby(room);
       return;
     }

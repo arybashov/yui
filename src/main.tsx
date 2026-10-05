@@ -34,6 +34,23 @@ function blockContextMenu(): void {
   });
 }
 
+/** Сколько сплэш студии держится на экране, даже если игра загрузилась быстрее. */
+const SPLASH_MIN_MS = 1500;
+
+/** Убрать сплэш студии (он в index.html и виден с первой секунды загрузки). */
+function hideSplash(): Promise<void> {
+  const splash = document.getElementById('splash');
+  if (!splash) return Promise.resolve();
+  const wait = Math.max(0, SPLASH_MIN_MS - performance.now());
+  return new Promise((resolve) =>
+    setTimeout(() => {
+      splash.classList.add('gone');
+      setTimeout(() => splash.remove(), 450);
+      resolve();
+    }, wait),
+  );
+}
+
 async function start(): Promise<void> {
   // язык площадки нужен до первой отрисовки, иначе интерфейс мигнёт другим языком
   await initPlatform();
@@ -49,6 +66,7 @@ async function start(): Promise<void> {
     const shot = params.get('shot');
     if (shot) {
       const { ShotScene } = await import('./dev/shots');
+      document.getElementById('splash')?.remove();
       createRoot(document.getElementById('root')!).render(<ShotScene name={shot} />);
       await preloadCards();
       return;
@@ -62,6 +80,7 @@ async function start(): Promise<void> {
   );
 
   await preloadCards();
+  await hideSplash();
   gameReady();
 }
 

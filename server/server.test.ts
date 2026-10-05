@@ -86,6 +86,7 @@ describe('игровой сервер', () => {
       port: 0,
       botDelayMs: 5,
       emptyRoomTtlMs: 50,
+      quickStartMs: 200,
       statsFile: join(tmpdir(), `yui-stats-${process.pid}-${Date.now()}.json`),
     });
     await once(server.http, 'listening');
@@ -202,5 +203,54 @@ describe('игровой сервер', () => {
     const stranger = await connect();
     stranger.send({ t: 'rejoin', code, token: 'не тот ключ' });
     expect((await stranger.next('error')).code).toBe('game-over');
+  });
+
+  it('быстрая игра сводит незнакомых игроков и стартует сама, без ботов', async () => {
+    const anna = await connect();
+    anna.send({ t: 'quick', name: 'Анна' });
+    const alone = await anna.next('lobby');
+    expect(alone.quick).toBe(true);
+    expect(alone.startsIn).toBeNull();
+
+    const boris = await connect();
+    boris.send({ t: 'quick', name: 'Борис' });
+    const lobby = await boris.next('lobby', (m) => m.names.length === 2);
+    expect(lobby.names).toEqual(['Анна', 'Борис']);
+    expect(lobby.startsIn).toBeGreaterThan(0);
+    // кнопки «Начать» в быстрой игре нет — сервер стартует сам
+    anna.send({ t: 'start', bots: 3, level: 'normal' });
+
+    const view = await boris.view();
+    expect(view.players.map((p) => p.name)).toEqual(['Анна', 'Борис']);
+    expect(view.players.every((p) => !p.isBot)).toBe(true);
+  });
+
+  it('в быструю игру не попадают чужие комнаты по коду и начатые партии', async () => {
+    const { anna } = await startedRoom();
+    await anna.view();
+    const friend = await connect();
+    friend.send({ t: 'create', name: 'Друг' });
+    await friend.next('joined');
+
+    const vera = await connect();
+    vera.send({ t: 'quick', name: 'Вера' });
+    const lobby = await vera.next('lobby');
+    expect(lobby.names).toEqual(['Вера']);
+  });
+
+  it('если соперник ушёл из быстрой игры до старта, отсчёт отменяется', async () => {
+    const anna = await connect();
+    anna.send({ t: 'quick', name: 'Анна' });
+    await anna.next('lobby');
+    const boris = await connect();
+    boris.send({ t: 'quick', name: 'Борис' });
+    await anna.next('lobby', (m) => m.names.length === 2);
+    boris.socket.close();
+    const back = await anna.next('lobby', (m) => m.names.length === 1);
+    expect(back.startsIn).toBeNull();
+    // и следующий ищущий попадает к Анне, а не в новую комнату
+    const vera = await connect();
+    vera.send({ t: 'quick', name: 'Вера' });
+    expect((await vera.next('lobby')).names).toEqual(['Анна', 'Вера']);
   });
 });

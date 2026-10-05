@@ -114,11 +114,55 @@ function Lobby({ code, names, you, onStart, hint }: LobbyProps) {
   );
 }
 
-function RoomFrame({ children, onExit }: { children: React.ReactNode; onExit: () => void }) {
+/** Быстрая игра: сервер подбирает соперников и сам начинает партию. */
+function QuickLobby({ state, onBots }: { state: OnlineState; onBots?: () => void }) {
+  const t = useT();
+  const [now, setNow] = useState(Date.now);
+
+  useEffect(() => {
+    if (state.startsAt === null) return;
+    const timer = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(timer);
+  }, [state.startsAt]);
+
+  const seconds = state.startsAt === null ? null : Math.max(0, Math.ceil((state.startsAt - now) / 1000));
+
+  return (
+    <div className="panel">
+      <h2>{seconds === null ? t.searching : t.foundPlayers}</h2>
+      <ul className="players">
+        {state.names.map((name, i) => (
+          <li key={i}>{i === state.you ? `${name} ${t.youSuffix}` : name}</li>
+        ))}
+      </ul>
+      {seconds === null ? (
+        <p className="muted hint">{t.nobodyYet}</p>
+      ) : (
+        <p className="countdown">{t.startsIn(seconds)}</p>
+      )}
+      {state.online > 0 && <p className="muted hint">{t.playersOnline(state.online)}</p>}
+      {seconds === null && onBots && (
+        <button type="button" className="btn wide" onClick={onBots}>
+          {t.playBotsInstead}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function RoomFrame({
+  children,
+  onExit,
+  title,
+}: {
+  children: React.ReactNode;
+  onExit: () => void;
+  title?: string;
+}) {
   const t = useT();
   return (
     <div className="screen">
-      <h1 className="title small">{t.room}</h1>
+      <h1 className="title small">{title ?? t.room}</h1>
       {children}
       <button type="button" className="btn ghost" onClick={onExit}>
         {t.back}
@@ -128,7 +172,16 @@ function RoomFrame({ children, onExit }: { children: React.ReactNode; onExit: ()
 }
 
 /** Комната на игровом сервере. */
-export function OnlineScreen({ room, onExit }: { room: OnlineRoom; onExit: () => void }) {
+export function OnlineScreen({
+  room,
+  onExit,
+  onBots,
+}: {
+  room: OnlineRoom;
+  onExit: () => void;
+  /** уйти из поиска соперников и сыграть с ботом */
+  onBots?: () => void;
+}) {
   const t = useT();
   const [state, setState] = useState<OnlineState>(room.state.get());
   const [started, setStarted] = useState(false);
@@ -151,11 +204,13 @@ export function OnlineScreen({ room, onExit }: { room: OnlineRoom; onExit: () =>
     return <Table session={room} onExit={onExit} notice={notice} />;
   }
 
+  const quick = 'quick' in room.entry;
   return (
-    <RoomFrame onExit={onExit}>
+    <RoomFrame onExit={onExit} title={quick ? t.online : undefined}>
       {state.status === 'connecting' && <p className="muted">{t.connecting}</p>}
       {(state.status === 'error' || state.status === 'closed') && <p className="error">{error}</p>}
-      {state.status === 'lobby' && (
+      {state.status === 'lobby' && state.quick && <QuickLobby state={state} onBots={onBots} />}
+      {state.status === 'lobby' && !state.quick && (
         <Lobby
           code={state.code}
           names={state.names}

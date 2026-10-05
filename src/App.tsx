@@ -85,7 +85,11 @@ export function App() {
           }}
           initialCode={roomCode}
           online={ONLINE_AVAILABLE}
+          quick={Boolean(SERVER_URL)}
           onPlayBots={playBots}
+          onQuick={() =>
+            setScreen({ kind: 'online', room: new OnlineRoom(SERVER_URL, { quick: true, name: playerName }) })
+          }
           onHost={() =>
             setScreen(
               SERVER_URL
@@ -108,7 +112,16 @@ export function App() {
     case 'local':
       return <Table session={screen.session} onExit={toMenu} />;
     case 'online':
-      return <OnlineScreen room={screen.room} onExit={toMenu} />;
+      return (
+        <OnlineScreen
+          room={screen.room}
+          onExit={toMenu}
+          onBots={() => {
+            screen.room.leave();
+            playBots(1, 'normal');
+          }}
+        />
+      );
     case 'host':
       return <HostScreen room={screen.room} hostName={playerName} onExit={toMenu} />;
     case 'guest':

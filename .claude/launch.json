@@ -4,8 +4,29 @@
     {
       "name": "yui-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5173
+    },
+    {
+      "name": "yui-server",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "npm run build:server && set PORT=8790&& set HOST=127.0.0.1&& set STATS_FILE=dist-server/stats-dev.json&& node dist-server/server.cjs"
+      ],
+      "port": 8790
+    },
+    {
+      "name": "yui-dev-online",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set VITE_SERVER_URL=ws://127.0.0.1:8790&& npx vite --port 5174"
+      ],
+      "port": 5174
     }
   ]
 }

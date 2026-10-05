@@ -13,7 +13,10 @@ interface MenuProps {
   initialCode: string;
   /** есть ли в этой сборке игра по сети */
   online: boolean;
+  /** быстрый подбор соперников — только с игровым сервером */
+  quick: boolean;
   onPlayBots: (opponents: number, level: BotLevel) => void;
+  onQuick: () => void;
   onHost: () => void;
   onJoin: (code: string) => void;
   onTutorial: () => void;
@@ -29,7 +32,9 @@ export function Menu({
   onNameChange,
   initialCode,
   online,
+  quick,
   onPlayBots,
+  onQuick,
   onHost,
   onJoin,
   onTutorial,
@@ -112,6 +117,15 @@ export function Menu({
               onChange={(e) => onNameChange(e.target.value)}
             />
           </label>
+          {quick && (
+            <>
+              <button type="button" className="btn primary wide" onClick={onQuick}>
+                {t.quickMatch}
+              </button>
+              <p className="muted hint">{t.quickNote}</p>
+              <h3 className="sub">{t.withFriends}</h3>
+            </>
+          )}
           <button type="button" className="btn wide" onClick={onHost}>
             {t.createRoom}
           </button>

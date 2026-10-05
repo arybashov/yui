@@ -55,6 +55,15 @@ export interface Dict {
   play: string;
 
   online: string;
+  quickMatch: string;
+  quickNote: string;
+  withFriends: string;
+  searching: string;
+  foundPlayers: string;
+  startsIn: (seconds: number) => string;
+  nobodyYet: string;
+  playersOnline: (count: number) => string;
+  playBotsInstead: string;
   createRoom: string;
   roomCode: string;
   join: string;

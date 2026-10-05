@@ -8,12 +8,35 @@
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <style>
+      /* Сплэш студии, как загрузочный экран «Городков»: виден сразу, пока грузится игра.
+         Фон — ровно цвет фона картинки, иначе вокруг неё на любом экране видна рамка. */
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        background: #221a15;
+        transition: opacity 0.4s ease;
+      }
+      #splash img {
+        width: min(72vmin, 520px);
+        height: auto;
+      }
+      #splash.gone {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="splash"><img src="/splash.webp" alt="Hedgehog Group" /></div>
     <script>
       // Файл открыт прямо с диска: без сервера игра не загрузится, и страница была бы пустой.
       if (location.protocol === 'file:') {
+        document.getElementById('splash').remove();
         document.body.style.cssText =
           'margin:0;min-height:100vh;display:grid;place-items:center;background:#24150c;color:#f7ecd9;font-family:Segoe UI,system-ui,sans-serif';
         document.getElementById('root').innerHTML =

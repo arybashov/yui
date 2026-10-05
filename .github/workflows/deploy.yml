@@ -25,7 +25,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # тот же игровой сервер, что у Яндекса и yui.com.ru: все ищут соперников в одном месте
       - run: npm run build
+        env:
+          VITE_SERVER_URL: wss://yui.com.ru/ws
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

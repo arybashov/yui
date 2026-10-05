@@ -461,6 +461,24 @@ button:focus-visible {
   font-size: 0.88rem;
 }
 
+/* «С друзьями — по коду» под быстрой игрой: второй, тихий раздел панели */
+.panel h3.sub {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.countdown {
+  margin: 0;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--gold);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
 .players {
   margin: 0;
   padding: 0;

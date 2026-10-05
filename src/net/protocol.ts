@@ -18,6 +18,8 @@ export interface ClientMeta {
 export type ClientMessage =
   | ({ t: 'create'; name: string } & ClientMeta)
   | ({ t: 'join'; code: string; name: string } & ClientMeta)
+  /** быстрая игра: сервер сам сводит незнакомых игроков в одну партию */
+  | ({ t: 'quick'; name: string } & ClientMeta)
   /** возврат в идущую партию после обрыва связи */
   | ({ t: 'rejoin'; code: string; token: string } & ClientMeta)
   | { t: 'start'; bots: number; level: BotLevel }
@@ -29,7 +31,18 @@ export type ClientMessage =
 export type ServerMessage =
   /** игрок принят в комнату; token нужен для возврата после обрыва */
   | { t: 'joined'; code: string; token: string }
-  | { t: 'lobby'; names: string[]; you: number; owner: number }
+  | {
+      t: 'lobby';
+      names: string[];
+      you: number;
+      owner: number;
+      /** комната быстрой игры: стартует сама, без кода и без ботов */
+      quick?: boolean;
+      /** через сколько мс партия начнётся сама (быстрая игра, когда собралось двое) */
+      startsIn?: number | null;
+      /** сколько людей сейчас на сервере */
+      online?: number;
+    }
   | { t: 'view'; view: PlayerView }
   | { t: 'error'; code: NetError };
 

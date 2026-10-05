@@ -18,10 +18,19 @@ export interface OnlineState {
   names: string[];
   you: number;
   owner: number;
+  /** быстрая игра: соперников подбирает сервер */
+  quick: boolean;
+  /** когда партия начнётся сама (время этого браузера), null — ждём второго */
+  startsAt: number | null;
+  /** сколько людей на сервере */
+  online: number;
   error?: NetError;
 }
 
-export type RoomEntry = { create: true; name: string } | { code: string; name: string };
+export type RoomEntry =
+  | { create: true; name: string }
+  | { quick: true; name: string }
+  | { code: string; name: string };
 
 /** Комната на игровом сервере: партию ведёт сервер, браузер шлёт ходы и рисует стол. */
 export class OnlineRoom implements Session {
@@ -31,6 +40,9 @@ export class OnlineRoom implements Session {
     names: [],
     you: -1,
     owner: 0,
+    quick: false,
+    startsAt: null,
+    online: 0,
   });
   private socket: WebSocket | null = null;
   private token = '';
@@ -43,7 +55,7 @@ export class OnlineRoom implements Session {
 
   constructor(
     private url: string,
-    private entry: RoomEntry,
+    readonly entry: RoomEntry,
   ) {
     this.connect();
   }
@@ -55,6 +67,7 @@ export class OnlineRoom implements Session {
       const meta = clientMeta();
       if (this.token) this.send({ t: 'rejoin', code: this.state.get().code, token: this.token, ...meta });
       else if ('create' in this.entry) this.send({ t: 'create', name: this.entry.name, ...meta });
+      else if ('quick' in this.entry) this.send({ t: 'quick', name: this.entry.name, ...meta });
       else this.send({ t: 'join', code: this.entry.code, name: this.entry.name, ...meta });
       this.reportVisibility();
     };
@@ -83,7 +96,15 @@ export class OnlineRoom implements Session {
       this.retries = 0;
       this.state.set({ code: message.code });
     } else if (message.t === 'lobby') {
-      this.state.set({ status: 'lobby', names: message.names, you: message.you, owner: message.owner });
+      this.state.set({
+        status: 'lobby',
+        names: message.names,
+        you: message.you,
+        owner: message.owner,
+        quick: Boolean(message.quick),
+        startsAt: message.startsIn == null ? null : Date.now() + message.startsIn,
+        online: message.online ?? 0,
+      });
     } else if (message.t === 'view') {
       this.view = message.view;
       if (this.state.get().status !== 'game') this.state.set({ status: 'game' });
