@@ -208,7 +208,20 @@ export function OnlineScreen({
   return (
     <RoomFrame onExit={onExit} title={quick ? t.online : undefined}>
       {state.status === 'connecting' && <p className="muted">{t.connecting}</p>}
-      {(state.status === 'error' || state.status === 'closed') && <p className="error">{error}</p>}
+      {(state.status === 'error' || state.status === 'closed') && (
+        <>
+          <p className="error">{error}</p>
+          {/* боты живут в браузере, им сервер не нужен */}
+          {onBots && (
+            <div className="panel">
+              <p className="muted hint">{t.offlineBotsNote}</p>
+              <button type="button" className="btn primary wide" onClick={onBots}>
+                {t.playBotsOffline}
+              </button>
+            </div>
+          )}
+        </>
+      )}
       {state.status === 'lobby' && state.quick && <QuickLobby state={state} onBots={onBots} />}
       {state.status === 'lobby' && !state.quick && (
         <Lobby

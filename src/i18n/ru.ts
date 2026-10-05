@@ -60,6 +60,8 @@ export const ru: Dict = {
   nobodyYet: 'Пока за столом только вы. Как только зайдёт ещё игрок, партия начнётся сама.',
   playersOnline: (n) => `Игроков на сервере: ${n}`,
   playBotsInstead: 'Не ждать — играть с ботом',
+  offlineBotsNote: 'С ботом можно играть и без связи с сервером.',
+  playBotsOffline: 'Играть с ботом',
   createRoom: 'Создать комнату',
   roomCode: 'Код комнаты',
   join: 'Войти',

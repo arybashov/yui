@@ -51,6 +51,8 @@ export const en: Dict = {
   nobodyYet: "You're the only one at the table so far. The game starts as soon as another player joins.",
   playersOnline: (n) => `Players on the server: ${n}`,
   playBotsInstead: "Don't wait — play a bot",
+  offlineBotsNote: 'You can play a bot without a connection to the server.',
+  playBotsOffline: 'Play a bot',
   createRoom: 'Create a room',
   roomCode: 'Room code',
   join: 'Join',

@@ -64,6 +64,8 @@ export interface Dict {
   nobodyYet: string;
   playersOnline: (count: number) => string;
   playBotsInstead: string;
+  offlineBotsNote: string;
+  playBotsOffline: string;
   createRoom: string;
   roomCode: string;
   join: string;
