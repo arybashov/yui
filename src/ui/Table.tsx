@@ -7,7 +7,8 @@ import { markGameplay, showInterstitial } from '../platform/yandex';
 import { useCardAnimations } from './animations';
 import { CardBack, CardView } from './CardView';
 import { playSound } from './sound';
-import { Settings } from './Settings';
+import { Rules } from './Rules';
+import { SoundToggle } from './SoundToggle';
 import { vibrate } from './haptics';
 import { describeAction, playerName, rankLabel } from './text';
 
@@ -37,7 +38,7 @@ export function Table({ session, onExit, notice, onRetry, coach }: TableProps) {
   const t = useT();
   const [view, setView] = useState<PlayerView | null>(null);
   /** меню паузы и экран настроек — как в «Городках» */
-  const [menu, setMenu] = useState<'closed' | 'pause' | 'settings'>('closed');
+  const [menu, setMenu] = useState<'closed' | 'pause' | 'rules'>('closed');
 
   const previous = useRef<PlayerView | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -126,9 +127,27 @@ export function Table({ session, onExit, notice, onRetry, coach }: TableProps) {
           </span>
         )}
         <span className="spacer" />
-        <button type="button" className="btn small pause-btn" onClick={() => setMenu('pause')}>
-          <span aria-hidden="true">❚❚ </span>
-          {t.pause}
+        <SoundToggle />
+        <button
+          type="button"
+          className="btn icon"
+          aria-label={t.rules}
+          title={t.rules}
+          onClick={() => setMenu('rules')}
+        >
+          ?
+        </button>
+        <button
+          type="button"
+          className="btn icon"
+          aria-label={t.pause}
+          title={t.pause}
+          onClick={() => setMenu('pause')}
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+            <rect x="6" y="5" width="4" height="14" rx="1" />
+            <rect x="14" y="5" width="4" height="14" rx="1" />
+          </svg>
         </button>
       </header>
 
@@ -217,16 +236,13 @@ export function Table({ session, onExit, notice, onRetry, coach }: TableProps) {
             <button type="button" className="btn primary wide" onClick={() => setMenu('closed')}>
               {t.resume}
             </button>
-            <button type="button" className="btn wide" onClick={() => setMenu('settings')}>
-              {t.settings}
-            </button>
             <button type="button" className="btn wide" onClick={onExit}>
               {t.toMenu}
             </button>
           </div>
         </div>
       )}
-      {menu === 'settings' && <Settings onClose={() => setMenu('pause')} />}
+      {menu === 'rules' && <Rules onClose={() => setMenu('closed')} />}
     </div>
   );
 }

@@ -29,18 +29,9 @@ export interface Dict {
 
   yourName: string;
   defaultName: string;
-  /** экран настроек — как в «Городках»: строки-переключатели с пояснением */
-  settings: string;
-  soundLabel: string;
-  soundNote: string;
-  hapticsLabel: string;
-  hapticsNote: string;
-  /** переключатель «интерфейс на английском»; подпись — на текущем языке интерфейса */
-  langLabel: string;
-  langNote: string;
-  howToPlay: string;
-  done: string;
-  /** номер сборки внизу настроек, как в «Городках» */
+  soundTurnOn: string;
+  soundTurnOff: string;
+  /** номер сборки внизу правил */
   buildTag: (version: string) => string;
   /** меню паузы во время партии */
   pause: string;

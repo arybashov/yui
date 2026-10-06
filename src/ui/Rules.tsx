@@ -1,3 +1,4 @@
+import { APP_VERSION } from '../config';
 import { useT } from '../i18n';
 
 export function Rules({ onClose }: { onClose: () => void }) {
@@ -14,6 +15,7 @@ export function Rules({ onClose }: { onClose: () => void }) {
         <button type="button" className="btn primary" onClick={onClose}>
           {t.gotIt}
         </button>
+        <p className="muted build-tag">{t.buildTag(APP_VERSION)}</p>
       </div>
     </div>
   );

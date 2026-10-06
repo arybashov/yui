@@ -7,7 +7,8 @@ import { SERVER_URL } from '../net/online';
 import { normalizeRoomCode } from '../net/protocol';
 import { ServerStatus, useServerStatus } from '../net/status';
 import { Rules } from './Rules';
-import { Settings } from './Settings';
+import { LanguageSwitch } from './LanguageSwitch';
+import { SoundToggle } from './SoundToggle';
 
 interface MenuProps {
   name: string;
@@ -46,7 +47,6 @@ export function Menu({
   const [level, setLevel] = useState<BotLevel>('normal');
   const [code, setCode] = useState(initialCode);
   const [showRules, setShowRules] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   // доступность игрового сервера — видна в заголовке «Онлайн»; без сервера кнопки не горят
   const { status: server, recheck } = useServerStatus(online && quick ? SERVER_URL : '');
   const offline = server?.kind === 'offline';
@@ -54,18 +54,12 @@ export function Menu({
   return (
     <div className="screen">
       <div className="menu-head">
-        <div className="menu-side" />
+        <div className="menu-side">
+          <SoundToggle />
+        </div>
         <h1 className="title">{GAME_TITLE}</h1>
         <div className="menu-side end">
-          <button
-            type="button"
-            className="btn icon"
-            aria-label={t.settings}
-            title={t.settings}
-            onClick={() => setShowSettings(true)}
-          >
-            <GearIcon />
-          </button>
+          <LanguageSwitch />
         </div>
       </div>
       <p className="muted subtitle">{t.subtitle}</p>
@@ -177,7 +171,6 @@ export function Menu({
       </div>
 
       {showRules && <Rules onClose={() => setShowRules(false)} />}
-      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
@@ -196,14 +189,5 @@ function ServerBadge({ status }: { status: ServerStatus }) {
       <span className="dot" aria-hidden="true" />
       {text}
     </span>
-  );
-}
-
-/** Шестерёнка — общепонятный значок настроек, его находят без знания языка (требование 6.9). */
-export function GearIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
-      <path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.4 7.4 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5a.5.5 0 0 0 .6.2l2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6a.5.5 0 0 0 .5.4h4a.5.5 0 0 0 .5-.4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1a.5.5 0 0 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
-    </svg>
   );
 }

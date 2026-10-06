@@ -337,93 +337,43 @@ button:focus-visible {
     0 2px 0 var(--brass-dark);
 }
 
-/* ---------- настройки и пауза (как в «Городках») ---------- */
+/* ---------- пауза и язык ---------- */
 
-.settings,
 .pause-menu {
   width: min(24.706rem, 100%);
 }
 
-.toggles {
+.flags {
   display: flex;
-  flex-direction: column;
-  border-radius: 12px;
-  border: 1px solid rgba(138, 100, 39, 0.45);
-  background: rgba(0, 0, 0, 0.28);
+  gap: 0.471rem;
+}
+
+/* флаг языка: нарисованная картинка, выбранный светится, остальные приглушены */
+.flag {
+  width: clamp(2.118rem, 11vw, 2.824rem);
+  aspect-ratio: 3 / 2;
+  padding: 0;
+  border: 2px solid var(--wood-edge);
+  border-radius: 6px;
   overflow: hidden;
-}
-
-/* строка нажимается целиком, состояние — переключатель справа */
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.706rem;
-  width: 100%;
-  min-height: 3.647rem;
-  padding: 0.588rem 0.824rem;
-  border: 0;
   background: none;
-  color: var(--cream);
-  font: inherit;
-  text-align: left;
   cursor: pointer;
-}
-
-.toggle + .toggle {
-  border-top: 1px solid rgba(138, 100, 39, 0.3);
-}
-
-.toggle:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.toggle-text {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.118rem;
-}
-
-.toggle-label {
-  font-weight: 700;
-}
-
-.toggle-note {
-  font-size: 0.88rem;
-  color: var(--muted);
-  opacity: 0.8;
-}
-
-.switch {
-  flex: none;
-  position: relative;
-  width: 2.941rem;
-  height: 1.765rem;
-  border-radius: 15px;
-  background: rgba(255, 255, 255, 0.12);
-  transition: background 0.15s;
-}
-
-.switch .knob {
-  position: absolute;
-  top: 0.176rem;
-  left: 0.176rem;
-  width: 1.412rem;
-  height: 1.412rem;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
+  filter: saturate(0.5) brightness(0.65);
   transition:
-    left 0.15s,
-    background 0.15s;
+    filter 0.15s,
+    box-shadow 0.15s;
 }
 
-.switch.on {
-  background: linear-gradient(#fbe08a, #d2952a);
+.flag svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.switch.on .knob {
-  left: 1.353rem;
-  background: var(--ink);
+.flag.on {
+  filter: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 10px rgba(246, 201, 85, 0.6);
 }
 
 .build-tag {
@@ -431,10 +381,6 @@ button:focus-visible {
   text-align: center;
   font-size: 0.8rem;
   opacity: 0.7;
-}
-
-.pause-btn {
-  white-space: nowrap;
 }
 
 .join {
