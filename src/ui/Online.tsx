@@ -3,7 +3,7 @@ import { BotLevel } from '../game/bot';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../game/engine';
 import { Session } from '../game/session';
 import { useT } from '../i18n';
-import { OnlineRoom, OnlineState } from '../net/online';
+import { OnlineRoom, OnlineState, RETRYABLE_ERRORS } from '../net/online';
 import { GuestClient, GuestState, HostRoom, HostRoomState } from '../net/room';
 import { inviteLink } from '../platform/yandex';
 import { botLevels } from './Menu';
@@ -196,31 +196,40 @@ export function OnlineScreen({
   );
 
   const error = t.netErrors[state.error ?? 'lost-server'];
+  const failed = state.status === 'error' || state.status === 'closed';
+  const canRetry = failed && RETRYABLE_ERRORS.includes(state.error ?? 'lost-server');
 
   if (started) {
     let notice: string | undefined;
     if (state.status === 'reconnecting') notice = t.reconnecting;
     if (state.status === 'closed') notice = error;
-    return <Table session={room} onExit={onExit} notice={notice} />;
+    return (
+      <Table session={room} onExit={onExit} notice={notice} onRetry={canRetry ? () => room.retry() : undefined} />
+    );
   }
 
   const quick = 'quick' in room.entry;
   return (
     <RoomFrame onExit={onExit} title={quick ? t.online : undefined}>
       {state.status === 'connecting' && <p className="muted">{t.connecting}</p>}
-      {(state.status === 'error' || state.status === 'closed') && (
-        <>
+      {failed && (
+        <div className="panel">
           <p className="error">{error}</p>
+          {canRetry && (
+            <button type="button" className="btn primary wide" onClick={() => room.retry()}>
+              {t.tryAgain}
+            </button>
+          )}
           {/* боты живут в браузере, им сервер не нужен */}
           {onBots && (
-            <div className="panel">
+            <>
               <p className="muted hint">{t.offlineBotsNote}</p>
-              <button type="button" className="btn primary wide" onClick={onBots}>
+              <button type="button" className="btn wide" onClick={onBots}>
                 {t.playBotsOffline}
               </button>
-            </div>
+            </>
           )}
-        </>
+        </div>
       )}
       {state.status === 'lobby' && state.quick && <QuickLobby state={state} onBots={onBots} />}
       {state.status === 'lobby' && !state.quick && (

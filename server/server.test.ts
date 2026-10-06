@@ -205,6 +205,17 @@ describe('игровой сервер', () => {
     expect((await stranger.next('error')).code).toBe('game-over');
   });
 
+  it('отвечает меню, что жив, и сколько людей ищут соперника', async () => {
+    const anna = await connect();
+    anna.send({ t: 'quick', name: 'Анна' });
+    await anna.next('lobby');
+    const menu = await connect();
+    menu.send({ t: 'ping' });
+    const status = await menu.next('status');
+    expect(status.online).toBe(1);
+    expect(status.searching).toBe(1);
+  });
+
   it('быстрая игра сводит незнакомых игроков и стартует сама, без ботов', async () => {
     const anna = await connect();
     anna.send({ t: 'quick', name: 'Анна' });

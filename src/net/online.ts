@@ -11,6 +11,10 @@ export const SERVER_URL: string = import.meta.env.VITE_SERVER_URL ?? '';
 
 const RETRY_DELAY_MS = 1500;
 const MAX_RETRIES = 40;
+const CONNECT_TIMEOUT_MS = 8000;
+
+/** Ошибки сети, после которых есть смысл нажать «Повторить». */
+export const RETRYABLE_ERRORS: readonly NetError[] = ['cant-connect', 'connection-error', 'lost-server', 'server-full'];
 
 export interface OnlineState {
   status: 'connecting' | 'lobby' | 'game' | 'reconnecting' | 'error' | 'closed';
@@ -61,9 +65,33 @@ export class OnlineRoom implements Session {
   }
 
   private connect(): void {
-    const socket = new WebSocket(this.url);
+    let socket: WebSocket;
+    try {
+      socket = new WebSocket(this.url);
+    } catch {
+      // браузер или площадка не пустили соединение (адрес не разрешён, нет сети) —
+      // это та же неудача подключения, а не молчаливая поломка кнопки
+      this.socket = null;
+      this.dropped();
+      return;
+    }
     this.socket = socket;
+    // Обрыв засчитываем один раз. Соединение, заблокированное политикой площадки
+    // (адрес не в разрешённых), Chrome закрывает сразу и шлёт только error, без close;
+    // а повисшее без ответа — обрываем по тайм-ауту.
+    let over = false;
+    const fail = () => {
+      if (over) return;
+      over = true;
+      clearTimeout(timeout);
+      if (socket.readyState !== WebSocket.CLOSED) socket.close();
+      if (socket === this.socket) this.dropped();
+    };
+    const timeout = setTimeout(() => {
+      if (socket.readyState !== WebSocket.OPEN) fail();
+    }, CONNECT_TIMEOUT_MS);
     socket.onopen = () => {
+      clearTimeout(timeout);
       const meta = clientMeta();
       if (this.token) this.send({ t: 'rejoin', code: this.state.get().code, token: this.token, ...meta });
       else if ('create' in this.entry) this.send({ t: 'create', name: this.entry.name, ...meta });
@@ -72,7 +100,10 @@ export class OnlineRoom implements Session {
       this.reportVisibility();
     };
     socket.onmessage = (event) => this.onMessage(JSON.parse(String(event.data)) as ServerMessage);
-    socket.onclose = () => this.onClose(socket);
+    socket.onclose = fail;
+    socket.onerror = () => {
+      if (socket.readyState === WebSocket.CLOSED) fail();
+    };
   }
 
   /** Сообщать серверу, видна ли вкладка, — для честного учёта времени в игре. */
@@ -118,8 +149,9 @@ export class OnlineRoom implements Session {
     }
   }
 
-  private onClose(socket: WebSocket): void {
-    if (this.finished || socket !== this.socket) return;
+  /** Соединение не открылось или оборвалось. */
+  private dropped(): void {
+    if (this.finished) return;
     const { status } = this.state.get();
     if ((status === 'game' || status === 'reconnecting') && this.retries < MAX_RETRIES) {
       // сервер придержит место: за нас пока играет бот
@@ -134,6 +166,17 @@ export class OnlineRoom implements Session {
     } else {
       this.state.set({ status: 'closed', error: 'lost-server' });
     }
+  }
+
+  /** «Повторить» после неудачи: вернуться в ту же партию или зайти заново. */
+  retry(): void {
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.finished = false;
+    this.retries = 0;
+    // до начала партии место за нами не держат — входим так же, как в первый раз
+    if (!this.view) this.token = '';
+    this.state.set({ status: this.view ? 'reconnecting' : 'connecting', error: undefined });
+    this.connect();
   }
 
   start(bots: number, level: BotLevel): void {

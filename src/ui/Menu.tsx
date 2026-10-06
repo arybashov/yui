@@ -3,7 +3,9 @@ import { GAME_TITLE } from '../config';
 import { BotLevel } from '../game/bot';
 import { MAX_PLAYERS } from '../game/engine';
 import { Dict, useT } from '../i18n';
+import { SERVER_URL } from '../net/online';
 import { normalizeRoomCode } from '../net/protocol';
+import { ServerStatus, useServerStatus } from '../net/status';
 import { Rules } from './Rules';
 import { Settings } from './Settings';
 
@@ -45,6 +47,9 @@ export function Menu({
   const [code, setCode] = useState(initialCode);
   const [showRules, setShowRules] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // доступность игрового сервера — видна в заголовке «Онлайн»; без сервера кнопки не горят
+  const { status: server, recheck } = useServerStatus(online && quick ? SERVER_URL : '');
+  const offline = server?.kind === 'offline';
 
   return (
     <div className="screen">
@@ -106,7 +111,18 @@ export function Menu({
 
       {online && (
         <div className="panel">
-          <h2>{t.online}</h2>
+          <div className="panel-head">
+            <h2>{t.online}</h2>
+            {server && <ServerBadge status={server} />}
+          </div>
+          {offline && (
+            <>
+              <p className="error hint">{t.serverOfflineNote}</p>
+              <button type="button" className="btn wide" onClick={recheck}>
+                {t.recheck}
+              </button>
+            </>
+          )}
           {/* имя видят только соперники по сети, поэтому оно спрашивается здесь */}
           <label className="field">
             <span>{t.yourName}</span>
@@ -119,14 +135,14 @@ export function Menu({
           </label>
           {quick && (
             <>
-              <button type="button" className="btn primary wide" onClick={onQuick}>
+              <button type="button" className="btn primary wide" disabled={offline} onClick={onQuick}>
                 {t.quickMatch}
               </button>
               <p className="muted hint">{t.quickNote}</p>
               <h3 className="sub">{t.withFriends}</h3>
             </>
           )}
-          <button type="button" className="btn wide" onClick={onHost}>
+          <button type="button" className="btn wide" disabled={offline} onClick={onHost}>
             {t.createRoom}
           </button>
           <form
@@ -134,7 +150,7 @@ export function Menu({
             onSubmit={(e) => {
               e.preventDefault();
               const clean = normalizeRoomCode(code);
-              if (clean) onJoin(clean);
+              if (clean && !offline) onJoin(clean);
             }}
           >
             <input
@@ -144,7 +160,7 @@ export function Menu({
               aria-label={t.roomCode}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
             />
-            <button type="submit" className="btn" disabled={!normalizeRoomCode(code)}>
+            <button type="submit" className="btn" disabled={offline || !normalizeRoomCode(code)}>
               {t.join}
             </button>
           </form>
@@ -163,6 +179,23 @@ export function Menu({
       {showRules && <Rules onClose={() => setShowRules(false)} />}
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
     </div>
+  );
+}
+
+/** Огонёк сервера: зелёный — на связи, красный — недоступен, мигает — проверяем. */
+function ServerBadge({ status }: { status: ServerStatus }) {
+  const t = useT();
+  let text = t.serverChecking;
+  if (status.kind === 'online') {
+    text = status.searching > 0 ? `${t.serverOnline} · ${t.serverSearching(status.searching)}` : t.serverOnline;
+  } else if (status.kind === 'offline') {
+    text = t.serverOffline;
+  }
+  return (
+    <span className={`server-badge ${status.kind}`} role="status">
+      <span className="dot" aria-hidden="true" />
+      {text}
+    </span>
   );
 }
 

@@ -25,6 +25,8 @@ export type ClientMessage =
   | { t: 'start'; bots: number; level: BotLevel }
   | { t: 'move'; move: Move }
   | { t: 'newDeal' }
+  /** меню спрашивает, жив ли сервер и сколько на нём людей */
+  | { t: 'ping' }
   /** вкладка видима/скрыта — для учёта времени в игре */
   | { t: 'visible'; visible: boolean };
 
@@ -44,6 +46,8 @@ export type ServerMessage =
       online?: number;
     }
   | { t: 'view'; view: PlayerView }
+  /** ответ на ping: людей на сервере (кроме спросившего) и сколько из них ищут соперника */
+  | { t: 'status'; online: number; searching: number }
   | { t: 'error'; code: NetError };
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

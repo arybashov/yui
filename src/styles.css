@@ -461,6 +461,59 @@ button:focus-visible {
   font-size: 0.88rem;
 }
 
+/* заголовок панели с огоньком справа */
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.588rem;
+  flex-wrap: wrap;
+}
+
+.server-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.353rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.server-badge .dot {
+  width: 0.588rem;
+  height: 0.588rem;
+  border-radius: 50%;
+  background: #9a8a70;
+}
+
+.server-badge.online {
+  color: #b9f0a0;
+}
+
+.server-badge.online .dot {
+  background: #6fe04f;
+  box-shadow: 0 0 6px #6fe04f;
+}
+
+.server-badge.offline {
+  color: var(--danger);
+}
+
+.server-badge.offline .dot {
+  background: #ff5a48;
+  box-shadow: 0 0 6px #ff5a48;
+}
+
+.server-badge.checking .dot {
+  animation: server-blink 1s ease-in-out infinite alternate;
+}
+
+@keyframes server-blink {
+  to {
+    opacity: 0.25;
+  }
+}
+
 /* «С друзьями — по коду» под быстрой игрой: второй, тихий раздел панели */
 .panel h3.sub {
   margin: 0.353rem 0 0;

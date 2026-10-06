@@ -381,6 +381,13 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     if (conn) conn.lastSeen = Date.now();
     applyMeta(conn, message);
 
+    if (message.t === 'ping') {
+      const searching = [...rooms.values()]
+        .filter((r) => r.quick && !r.session)
+        .reduce((n, r) => n + r.members.filter((m) => m.socket).length, 0);
+      return send(socket, { t: 'status', online: Math.max(0, conns.size - 1), searching });
+    }
+
     if (message.t === 'visible') {
       if (conn) conn.visible = Boolean(message.visible);
       return;

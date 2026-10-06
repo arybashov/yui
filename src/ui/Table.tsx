@@ -16,6 +16,8 @@ interface TableProps {
   onExit: () => void;
   /** сообщение поверх стола, например об обрыве связи */
   notice?: string;
+  /** у сообщения о потере связи — кнопка «Повторить» */
+  onRetry?: () => void;
   /** подсказки обучения: показываются над стопкой вместо журнала ходов */
   coach?: Coach;
 }
@@ -31,7 +33,7 @@ export interface Coach {
 const MAX_BACKS = 10;
 const PILE_TOP = 3;
 
-export function Table({ session, onExit, notice, coach }: TableProps) {
+export function Table({ session, onExit, notice, onRetry, coach }: TableProps) {
   const t = useT();
   const [view, setView] = useState<PlayerView | null>(null);
   /** меню паузы и экран настроек — как в «Городках» */
@@ -195,7 +197,12 @@ export function Table({ session, onExit, notice, coach }: TableProps) {
         <div className="overlay">
           <div className="panel">
             <h2>{notice}</h2>
-            <button type="button" className="btn primary" onClick={onExit}>
+            {onRetry && (
+              <button type="button" className="btn primary" onClick={onRetry}>
+                {t.tryAgain}
+              </button>
+            )}
+            <button type="button" className={`btn ${onRetry ? '' : 'primary'}`} onClick={onExit}>
               {t.toMenu}
             </button>
           </div>

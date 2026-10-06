@@ -56,6 +56,12 @@ export interface Dict {
 
   online: string;
   quickMatch: string;
+  serverChecking: string;
+  serverOnline: string;
+  serverSearching: (count: number) => string;
+  serverOffline: string;
+  serverOfflineNote: string;
+  recheck: string;
   quickNote: string;
   withFriends: string;
   searching: string;
@@ -86,6 +92,7 @@ export interface Dict {
   yourLetters: string;
   exit: string;
   toMenu: string;
+  tryAgain: string;
   back: string;
 
   statusDealOver: string;
