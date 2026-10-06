@@ -20,6 +20,23 @@ type Screen =
   | { kind: 'guest'; client: GuestClient; code: string };
 
 const NAME_KEY = 'yui.name';
+/** Телефон, повёрнутый горизонтально: играть так тесно, просим повернуть (то же условие в styles.css). */
+const LANDSCAPE_PHONE = '(orientation: landscape) and (pointer: coarse) and (max-height: 540px)';
+
+/** Заслонка «поверните телефон»; видна только при LANDSCAPE_PHONE (см. .rotate-note в styles.css). */
+function RotateNote() {
+  const t = useT();
+  return (
+    <div className="rotate-note" aria-live="polite">
+      <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+        <rect x="7" y="2.5" width="10" height="19" rx="2" />
+        <path d="M11 18.5h2" strokeLinecap="round" />
+        <path d="M20.5 9a7 7 0 0 0-3-4.5M17.5 2.8v1.9h1.9" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <p>{t.rotatePhone}</p>
+    </div>
+  );
+}
 /** На Яндекс Играх сеть доступна только через свой сервер: прямое соединение
  *  между браузерами идёт через сторонний сервис, а это площадка не разрешает. */
 const ONLINE_AVAILABLE = Boolean(SERVER_URL) || !IS_YANDEX;
@@ -41,6 +58,15 @@ function saveName(name: string): void {
 }
 
 export function App() {
+  return (
+    <>
+      <Screens />
+      <RotateNote />
+    </>
+  );
+}
+
+function Screens() {
   const t = useT();
   const [screen, setScreen] = useState<Screen>({ kind: 'menu' });
   const [name, setName] = useState(loadName);
@@ -54,6 +80,16 @@ export function App() {
   useEffect(() => {
     if (!localSession) return;
     return platformPause.subscribe(({ paused }) => localSession.pauseFor('platform', paused));
+  }, [localSession]);
+
+  // Пока телефон лежит горизонтально и игра закрыта заслонкой, боты тоже ждут.
+  useEffect(() => {
+    if (!localSession) return;
+    const query = window.matchMedia(LANDSCAPE_PHONE);
+    const update = () => localSession.pauseFor('rotate', query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
   }, [localSession]);
 
   const toMenu = () => {

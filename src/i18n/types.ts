@@ -72,6 +72,7 @@ export interface Dict {
 
   tutorial: string;
   rules: string;
+  rotatePhone: string;
   rulesItems: string[];
   gotIt: string;
 

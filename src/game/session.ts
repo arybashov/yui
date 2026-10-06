@@ -43,7 +43,8 @@ export interface Session {
 }
 
 /** Почему партия на паузе: игрок открыл меню или площадка попросила (реклама, свёрнутое окно). */
-export type PauseReason = 'menu' | 'platform';
+/** пауза: меню, площадка (реклама, свёрнуто), телефон повёрнут горизонтально */
+export type PauseReason = 'menu' | 'platform' | 'rotate';
 
 export interface HostSeat {
   name: string;

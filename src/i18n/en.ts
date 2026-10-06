@@ -58,6 +58,7 @@ export const en: Dict = {
   join: 'Join',
 
   tutorial: 'Tutorial',
+  rotatePhone: 'Turn your phone upright',
   rules: 'Rules',
   rulesItems: [
     'The deck has 20 cards: tens to aces. Suits do not matter and there are no trumps.',

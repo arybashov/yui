@@ -4,6 +4,7 @@ import { App } from './App';
 import { chooseLang } from './i18n';
 import { gameReady, initPlatform, platformPause } from './platform/yandex';
 import { preloadCards } from './ui/CardView';
+import { startAutoFit } from './ui/fit';
 import { setSoundSilenced } from './ui/sound';
 import '@fontsource/balsamiq-sans/cyrillic-400.css';
 import '@fontsource/balsamiq-sans/cyrillic-700.css';
@@ -73,6 +74,7 @@ async function start(): Promise<void> {
     }
   }
 
+  startAutoFit(document.getElementById('root')!);
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />
