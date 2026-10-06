@@ -35,21 +35,29 @@ function blockContextMenu(): void {
   });
 }
 
-/** Сколько сплэш студии держится на экране, даже если игра загрузилась быстрее. */
+/** Сколько сплэш студии держится на экране после загрузки игры. */
 const SPLASH_MIN_MS = 1500;
 
-/** Убрать сплэш студии (он в index.html и виден с первой секунды загрузки). */
+/**
+ * Показать сплэш студии и убрать его (он в index.html и виден с первой секунды загрузки).
+ * Время считается от готовности игры, а не от начала загрузки: на Яндекс Играх
+ * до LoadingAPI.ready() поверх игры стоит загрузочный экран площадки, и сплэш,
+ * отсчитанный от начала загрузки, успевал пропасть под ним. Нажатие пропускает сплэш.
+ */
 function hideSplash(): Promise<void> {
   const splash = document.getElementById('splash');
   if (!splash) return Promise.resolve();
-  const wait = Math.max(0, SPLASH_MIN_MS - performance.now());
-  return new Promise((resolve) =>
-    setTimeout(() => {
+  return new Promise((resolve) => {
+    const hide = () => {
+      clearTimeout(timer);
+      splash.removeEventListener('pointerdown', hide);
       splash.classList.add('gone');
       setTimeout(() => splash.remove(), 450);
       resolve();
-    }, wait),
-  );
+    };
+    const timer = setTimeout(hide, SPLASH_MIN_MS);
+    splash.addEventListener('pointerdown', hide);
+  });
 }
 
 async function start(): Promise<void> {
@@ -82,8 +90,9 @@ async function start(): Promise<void> {
   );
 
   await preloadCards();
-  await hideSplash();
+  // сначала площадке — «загрузились» (она снимает свой экран загрузки), потом сплэш на виду
   gameReady();
+  await hideSplash();
 }
 
 void start();
