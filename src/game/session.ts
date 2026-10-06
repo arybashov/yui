@@ -31,6 +31,8 @@ export interface PlayerView {
   /** кто собрал все буквы и проиграл матч; следующая раздача начнёт новый матч */
   matchLoser: number | null;
   canRestart: boolean;
+  /** через сколько мс следующая раздача начнётся сама (сетевая игра), иначе null */
+  nextDealIn: number | null;
 }
 
 export interface Session {
@@ -61,6 +63,10 @@ export interface HostOptions {
   onLeave?: () => void;
   /** кто может начинать новую раздачу; по умолчанию — локальный игрок */
   ownerSeat?: number;
+  /** новую раздачу может начать любой живой игрок, а не только владелец (игровой сервер) */
+  anyoneRestarts?: boolean;
+  /** раздача кончилась — следующая начнётся сама через столько мс, если за столом есть люди */
+  autoNextDealMs?: number;
 }
 
 const LOG_TAIL = 6;
@@ -80,6 +86,8 @@ export class HostSession implements Session {
   // для аналитики: когда началась текущая раздача и сколько ходов сделал каждый игрок
   private dealStartedAt = Date.now();
   private actions: number[];
+  private nextDealTimer: ReturnType<typeof setTimeout> | null = null;
+  private nextDealAt: number | null = null;
 
   constructor(
     private seats: HostSeat[],
@@ -122,6 +130,7 @@ export class HostSession implements Session {
 
   newDeal(): void {
     if (this.state.phase !== 'over') return;
+    this.cancelNextDeal();
     if (this.matchLoser() !== null) {
       this.losses = this.seats.map(() => 0);
       this.dealNo = 0;
@@ -196,10 +205,11 @@ export class HostSession implements Session {
 
   /** Новая раздача по просьбе удалённого игрока — только если он владелец комнаты. */
   requestNewDeal(seat: number): void {
-    if (seat === this.ownerSeat) this.newDeal();
+    if (this.canRestart(seat)) this.newDeal();
   }
 
   leave(): void {
+    this.cancelNextDeal();
     if (this.botTimer) clearTimeout(this.botTimer);
     this.botTimer = null;
     this.listeners.clear();
@@ -232,11 +242,39 @@ export class HostSession implements Session {
       moveNo: state.log.length,
       dealNo: this.dealNo,
       matchLoser: this.state.phase === 'over' ? this.matchLoser() : null,
-      canRestart: seat === this.ownerSeat,
+      canRestart: this.canRestart(seat),
+      nextDealIn: this.nextDealAt === null ? null : Math.max(0, this.nextDealAt - Date.now()),
     };
   }
 
+  /** Кто может начать следующую раздачу: владелец или, на сервере, любой живой игрок. */
+  private canRestart(seat: number): boolean {
+    if (this.options.anyoneRestarts) return this.seats[seat]?.kind === 'remote' || this.seats[seat]?.kind === 'local';
+    return seat === this.ownerSeat;
+  }
+
+  /** Сетевая игра не ждёт, пока кто-то нажмёт кнопку: следующая раздача начнётся сама. */
+  private scheduleNextDeal(): void {
+    const delay = this.options.autoNextDealMs;
+    if (!delay || this.state.phase !== 'over' || this.nextDealTimer) return;
+    // за столом только боты (все отключились) — раздачи не крутим
+    if (!this.seats.some((s) => s.kind === 'remote' || s.kind === 'local')) return;
+    this.nextDealAt = Date.now() + delay;
+    this.nextDealTimer = setTimeout(() => {
+      this.nextDealTimer = null;
+      this.nextDealAt = null;
+      this.newDeal();
+    }, delay);
+  }
+
+  private cancelNextDeal(): void {
+    if (this.nextDealTimer) clearTimeout(this.nextDealTimer);
+    this.nextDealTimer = null;
+    this.nextDealAt = null;
+  }
+
   private broadcast(): void {
+    this.scheduleNextDeal();
     this.seats.forEach((seat, i) => {
       if (seat.kind === 'remote') seat.send?.(this.viewFor(i));
     });

@@ -127,6 +127,8 @@ export interface Dict {
   colLetters: string;
   newDeal: string;
   newMatch: string;
+  autoNextDeal: (seconds: number) => string;
+  autoNextMatch: (seconds: number) => string;
   ownerStartsDeal: string;
   ownerStartsMatch: string;
 

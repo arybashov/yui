@@ -113,6 +113,7 @@ export class TutorialSession implements Session {
       dealNo: 1,
       matchLoser: null,
       canRestart: false,
+      nextDealIn: null,
     };
   }
 

@@ -131,6 +131,8 @@ export const ru: Dict = {
   colLetters: 'Буквы',
   newDeal: 'Новая раздача',
   newMatch: 'Новый матч',
+  autoNextDeal: (s) => `Следующая раздача — через ${s} с`,
+  autoNextMatch: (s) => `Новый матч — через ${s} с`,
   ownerStartsDeal: 'Новую раздачу начнёт создатель комнаты',
   ownerStartsMatch: 'Новый матч начнёт создатель комнаты',
 

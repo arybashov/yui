@@ -45,6 +45,7 @@ function view(v: Partial<PlayerView> & Pick<PlayerView, 'players' | 'hand' | 'pi
     dealNo: 1,
     matchLoser: null,
     canRestart: true,
+    nextDealIn: null,
     ...v,
   };
 }
@@ -131,6 +132,22 @@ function scenes(): Record<string, Scene> {
         phase: 'over',
         loser: 2,
         dealNo: 5,
+      }),
+    },
+    // то же в сетевой игре: следующая раздача начнётся сама (для проверки, не для каталога)
+    'result-online': {
+      view: view({
+        players: [
+          player(n.you, 0, { place: 1 }),
+          player(n.a, 3, { losses: 1 }),
+        ],
+        hand: [],
+        pile: cards('10S JH QD KS AD AC'),
+        log: [play(0, 'AC')],
+        phase: 'over',
+        loser: 1,
+        dealNo: 2,
+        nextDealIn: 12000,
       }),
     },
   };

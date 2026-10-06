@@ -32,6 +32,8 @@ export interface ServerOptions {
   pulseMs?: number;
   /** быстрая игра: сколько ждать ещё соперников, когда собралось двое */
   quickStartMs?: number;
+  /** через сколько мс после конца раздачи следующая начнётся сама */
+  nextDealMs?: number;
 }
 
 interface Member {
@@ -75,6 +77,7 @@ const MAX_MESSAGE_BYTES = 4096;
 const PING_INTERVAL_MS = 30000;
 const DEFAULT_PULSE_MS = 20000;
 const DEFAULT_QUICK_START_MS = 15000;
+const DEFAULT_NEXT_DEAL_MS = 12000;
 /** новичку в быстрой игре — хотя бы столько, чтобы увидеть, с кем играет */
 const QUICK_JOIN_GRACE_MS = 5000;
 
@@ -280,6 +283,9 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       botLevel: level,
       botDelayMs: options.botDelayMs,
       ownerSeat: 0,
+      // темп сетевой игры: следующую раздачу начинает любой, а не дождётся никто — начнётся сама
+      anyoneRestarts: true,
+      autoNextDealMs: options.nextDealMs ?? DEFAULT_NEXT_DEAL_MS,
     });
     room.startedAt = Date.now();
     room.session.start();

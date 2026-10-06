@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
+import { chooseMove } from '../src/game/bot';
 import { PlayerView } from '../src/game/session';
 import { ClientMessage, ServerMessage } from '../src/net/protocol';
 import { startServer } from './server';
@@ -87,6 +88,7 @@ describe('игровой сервер', () => {
       botDelayMs: 5,
       emptyRoomTtlMs: 50,
       quickStartMs: 200,
+      nextDealMs: 300,
       statsFile: join(tmpdir(), `yui-stats-${process.pid}-${Date.now()}.json`),
     });
     await once(server.http, 'listening');
@@ -130,7 +132,8 @@ describe('игровой сервер', () => {
     anna.send({ t: 'start', bots: 0, level: 'normal' });
     const view = await boris.view();
     expect(view.players.map((p) => p.name)).toEqual(['Анна', 'Борис']);
-    expect(view.canRestart).toBe(false);
+    // а вот следующую раздачу в сетевой игре может начать любой — чтобы не терять темп
+    expect(view.canRestart).toBe(true);
   });
 
   it('раздаёт карты и принимает ход только от того, чей он', async () => {
@@ -203,6 +206,24 @@ describe('игровой сервер', () => {
     const stranger = await connect();
     stranger.send({ t: 'rejoin', code, token: 'не тот ключ' });
     expect((await stranger.next('error')).code).toBe('game-over');
+  });
+
+  it('после раздачи следующая начинается сама, без создателя', async () => {
+    const { anna, boris } = await startedRoom();
+    // оба играют «как боты», пока раздача не кончится
+    const players = [anna, boris];
+    let view = await anna.view();
+    for (let i = 0; i < 2000 && view.phase === 'playing'; i++) {
+      const mover = players[view.turn];
+      // вид Анны уже прочитан в цикле, вид Бориса для этого же хода — берём из его очереди
+      const mine = mover === anna ? view : await boris.view((v) => v.moveNo === view.moveNo);
+      mover.send({ t: 'move', move: chooseMove(mine.hand, mine.pile, 'normal') });
+      view = await anna.view((v) => v.moveNo > view.moveNo || v.phase === 'over');
+    }
+    const over = await boris.view((v) => v.phase === 'over');
+    expect(over.nextDealIn).toBeGreaterThan(0);
+    const next = await boris.view((v) => v.dealNo === 2);
+    expect(next.phase).toBe('playing');
   });
 
   it('отвечает меню, что жив, и сколько людей ищут соперника', async () => {

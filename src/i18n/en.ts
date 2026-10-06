@@ -122,6 +122,8 @@ export const en: Dict = {
   colLetters: 'Letters',
   newDeal: 'New deal',
   newMatch: 'New match',
+  autoNextDeal: (s) => `Next deal in ${s} s`,
+  autoNextMatch: (s) => `New match in ${s} s`,
   ownerStartsDeal: 'The room owner starts the next deal',
   ownerStartsMatch: 'The room owner starts the next match',
 

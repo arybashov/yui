@@ -108,8 +108,10 @@ export function Table({ session, onExit, notice, onRetry, coach }: TableProps) {
   const recent = view.log.slice(-3).reverse();
 
   // Между раздачами — логическая пауза: здесь площадка может показать рекламу.
+  // Только там, где партию ведёт этот браузер (pauseFor): в сетевой игре остальные
+  // ждали бы, пока у одного идёт реклама.
   const newDeal = async () => {
-    await showInterstitial();
+    if (session.pauseFor) await showInterstitial();
     session.newDeal();
   };
 
@@ -319,6 +321,19 @@ function Pile({ pile }: { pile: Card[] }) {
   );
 }
 
+/** Секунды до события, о котором сервер сказал «через ms»; null — события нет. */
+function useCountdown(ms: number | null): number | null {
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => setDeadline(ms === null ? null : Date.now() + ms), [ms]);
+  useEffect(() => {
+    if (deadline === null) return;
+    const timer = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(timer);
+  }, [deadline]);
+  return deadline === null ? null : Math.max(0, Math.ceil((deadline - now) / 1000));
+}
+
 function Result({
   view,
   onNewDeal,
@@ -332,6 +347,7 @@ function Result({
   const me = view.seat;
   const myPlace = view.players[me].place;
   const matchOver = view.matchLoser !== null;
+  const autoSeconds = useCountdown(view.nextDealIn);
   let title: string;
   if (view.matchLoser === me) title = t.resultMatchLostYou(GAME_TITLE);
   else if (view.matchLoser !== null) title = t.resultMatchLost(playerName(view.players[view.matchLoser], t), GAME_TITLE);
@@ -366,6 +382,9 @@ function Result({
             ))}
           </tbody>
         </table>
+        {autoSeconds !== null && (
+          <p className="countdown">{matchOver ? t.autoNextMatch(autoSeconds) : t.autoNextDeal(autoSeconds)}</p>
+        )}
         <div className="actions">
           {view.canRestart ? (
             <button type="button" className="btn primary" onClick={onNewDeal}>
