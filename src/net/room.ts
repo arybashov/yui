@@ -17,7 +17,7 @@ type HostMessage =
   | { t: 'view'; view: PlayerView }
   | { t: 'reject'; reason: NetError };
 
-type GuestMessage = { t: 'hello'; name: string } | { t: 'move'; move: Move };
+type GuestMessage = { t: 'hello'; name: string } | { t: 'move'; move: Move } | { t: 'resign' };
 
 export interface HostRoomState {
   status: 'opening' | 'open' | 'error';
@@ -72,6 +72,9 @@ export class HostRoom {
     } else if (message.t === 'move' && this.session) {
       const index = this.guests.findIndex((g) => g.conn === conn);
       if (index >= 0) this.session.handleMove(index + 1, message.move);
+    } else if (message.t === 'resign' && this.session) {
+      const index = this.guests.findIndex((g) => g.conn === conn);
+      if (index >= 0) this.session.handleResign(index + 1);
     }
   }
 
@@ -186,6 +189,10 @@ export class GuestClient implements Session {
 
   move(move: Move): void {
     this.conn?.send({ t: 'move', move } satisfies GuestMessage);
+  }
+
+  resign(): void {
+    this.conn?.send({ t: 'resign' } satisfies GuestMessage);
   }
 
   newDeal(): void {

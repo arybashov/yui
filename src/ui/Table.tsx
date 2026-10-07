@@ -108,6 +108,9 @@ export function Table({ session, onExit, notice, onRetry, coach }: TableProps) {
   const opponents = players.map((_, i) => (me + i) % players.length).slice(1);
   const recent = view.log.slice(-3).reverse();
 
+  // Сдаться: раздача идёт, у меня ещё есть карты, и это не обучение
+  const canResign = Boolean(session.resign) && !coach && view.phase === 'playing' && view.hand.length > 0;
+
   // Между раздачами — логическая пауза: здесь площадка может показать рекламу.
   // Только там, где партию ведёт этот браузер (pauseFor): в сетевой игре остальные
   // ждали бы, пока у одного идёт реклама.
@@ -236,6 +239,21 @@ export function Table({ session, onExit, notice, onRetry, coach }: TableProps) {
             <button type="button" className="btn primary wide" onClick={() => setMenu('closed')}>
               {t.resume}
             </button>
+            {canResign && (
+              <>
+                <button
+                  type="button"
+                  className="btn wide"
+                  onClick={() => {
+                    session.resign?.();
+                    setMenu('closed');
+                  }}
+                >
+                  {t.resign}
+                </button>
+                <p className="muted hint">{t.resignNote}</p>
+              </>
+            )}
             <button type="button" className="btn wide" onClick={onExit}>
               {t.toMenu}
             </button>
@@ -268,6 +286,7 @@ function playViewSounds(before: PlayerView | null, view: PlayerView, tutorial: b
   const fresh = view.moveNo - before.moveNo;
   if (fresh === 0) return;
   view.log.slice(-fresh).forEach((entry, i) => {
+    if (entry.type === 'resign') return;
     playSound(entry.type === 'take' ? 'take' : 'card', { count: entry.cards.length, delay: i * 0.3 });
   });
 
@@ -364,9 +383,13 @@ function Result({
   const myPlace = view.players[me].place;
   const matchOver = view.matchLoser !== null;
   const autoSeconds = useCountdown(view.nextDealIn);
+  const last = view.log.at(-1);
+  const resigned = last?.type === 'resign' ? last.player : null;
   let title: string;
   if (view.matchLoser === me) title = t.resultMatchLostYou(GAME_TITLE);
   else if (view.matchLoser !== null) title = t.resultMatchLost(playerName(view.players[view.matchLoser], t), GAME_TITLE);
+  else if (resigned === me) title = t.logYouResign;
+  else if (resigned !== null) title = t.logResign(playerName(view.players[resigned], t));
   else if (view.loser === null) title = t.resultDraw;
   else if (view.loser === me) title = t.resultYouLost;
   else if (myPlace === 1) title = t.resultWin;
@@ -392,7 +415,9 @@ function Result({
             {order.map(({ player, seat }) => (
               <tr key={seat} className={seat === me ? 'you' : ''}>
                 <td>{seat === me ? `${player.name} ${t.youSuffix}` : playerName(player, t)}</td>
-                <td>{player.place !== null ? t.wentOut(player.place) : t.leftWithCards}</td>
+                <td>
+                  {player.place !== null ? t.wentOut(player.place) : seat === resigned ? t.resignedOutcome : t.leftWithCards}
+                </td>
                 <td className="letters">{letters(player.losses) || '—'}</td>
               </tr>
             ))}

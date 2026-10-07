@@ -106,6 +106,11 @@ export interface Dict {
   logPlay: (name: string, cards: string) => string;
   logYouTake: (count: number) => string;
   logTake: (name: string, count: number) => string;
+  logYouResign: string;
+  logResign: (name: string) => string;
+  resign: string;
+  resignNote: string;
+  resignedOutcome: string;
 
   resultMatchLostYou: (title: string) => string;
   resultMatchLost: (name: string, title: string) => string;

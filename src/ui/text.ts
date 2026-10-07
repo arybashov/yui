@@ -17,6 +17,7 @@ export function playerName(player: PlayerInfo, t: Dict): string {
 }
 
 export function describeAction(entry: LogEntry, name: string, isYou: boolean, t: Dict): string {
+  if (entry.type === 'resign') return isYou ? t.logYouResign : t.logResign(name);
   if (entry.type === 'take') {
     return isYou ? t.logYouTake(entry.cards.length) : t.logTake(name, entry.cards.length);
   }

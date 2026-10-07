@@ -14,7 +14,8 @@ export type Move = { type: 'play'; cards: string[] } | { type: 'take' };
 
 export interface LogEntry {
   player: number;
-  type: 'play' | 'take';
+  /** resign — игрок сдался: раздача кончилась, проиграл он */
+  type: 'play' | 'take' | 'resign';
   cards: Card[];
 }
 
@@ -185,4 +186,18 @@ export function applyMove(state: GameState, move: Move): GameState {
   } while (hands[next].length === 0);
 
   return { hands, pile, turn: next, finished, phase: 'playing', loser: null, log };
+}
+
+/**
+ * Игрок сдаётся: раздача сразу кончается, проигравший — он (получит букву).
+ * Сдаться может только тот, у кого ещё есть карты; иначе состояние не меняется.
+ */
+export function resign(state: GameState, player: number): GameState {
+  if (state.phase !== 'playing' || !state.hands[player] || state.hands[player].length === 0) return state;
+  return {
+    ...state,
+    phase: 'over',
+    loser: player,
+    log: [...state.log, { player, type: 'resign', cards: [] }],
+  };
 }

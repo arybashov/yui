@@ -103,6 +103,11 @@ export const en: Dict = {
   logPlay: (name, played) => `${name} plays ${played}`,
   logYouTake: (count) => `You take ${cards(count)}`,
   logTake: (name, count) => `${name} takes ${cards(count)}`,
+  logYouResign: 'You resigned',
+  logResign: (name) => `${name} resigns`,
+  resign: 'Resign',
+  resignedOutcome: 'resigned',
+  resignNote: 'You lose this deal and get a letter. The next deal starts as usual.',
 
   resultMatchLostYou: (title) => `You collected ${title} — match lost`,
   resultMatchLost: (name, title) => `${name} collects ${title} — the match is over`,

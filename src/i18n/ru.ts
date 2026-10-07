@@ -112,6 +112,11 @@ export const ru: Dict = {
   logPlay: (name, cards) => `${name} кладёт ${cards}`,
   logYouTake: (count) => `Вы берёте ${takeWord(count)}`,
   logTake: (name, count) => `${name} берёт ${takeWord(count)}`,
+  logYouResign: 'Вы сдались',
+  logResign: (name) => `${name} сдаётся`,
+  resign: 'Сдаться',
+  resignedOutcome: 'сдался',
+  resignNote: 'Раздача засчитается проигранной, вы получите букву. Следующая начнётся как обычно.',
 
   resultMatchLostYou: (title) => `Вы собрали ${title} — матч проигран`,
   resultMatchLost: (name, title) => `${name} собирает ${title} — матч окончен`,

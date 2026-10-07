@@ -479,6 +479,9 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
         room.session?.handleMove(index, move);
         recordRoom(room);
       }
+    } else if (message.t === 'resign') {
+      room.session?.handleResign(index);
+      recordRoom(room);
     } else if (message.t === 'newDeal') {
       room.session?.requestNewDeal(index);
       recordRoom(room);

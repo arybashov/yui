@@ -197,6 +197,10 @@ export class OnlineRoom implements Session {
     this.send({ t: 'newDeal' });
   }
 
+  resign(): void {
+    this.send({ t: 'resign' });
+  }
+
   leave(): void {
     this.finished = true;
     if (this.retryTimer) clearTimeout(this.retryTimer);

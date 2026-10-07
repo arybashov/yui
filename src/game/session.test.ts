@@ -65,4 +65,21 @@ describe('сетевая партия между раздачами', () => {
     expect(views[0].dealNo).toBe(2);
     session.leave();
   });
+
+  it('сдавшийся проигрывает раздачу и получает букву, потом раздача идёт дальше', () => {
+    vi.useFakeTimers();
+    const { session, views } = onlineTable({ anyoneRestarts: true, autoNextDealMs: 12000 });
+    session.handleResign(1);
+    expect(views[0].phase).toBe('over');
+    expect(views[0].loser).toBe(1);
+    expect(views[0].players[1].losses).toBe(1);
+    expect(views[0].log.at(-1)).toEqual({ player: 1, type: 'resign', cards: [] });
+    // повторная сдача после конца раздачи ничего не меняет
+    session.handleResign(1);
+    expect(views[0].players[1].losses).toBe(1);
+    vi.advanceTimersByTime(12000);
+    expect(views[0].dealNo).toBe(2);
+    expect(views[0].phase).toBe('playing');
+    session.leave();
+  });
 });

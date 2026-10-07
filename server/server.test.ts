@@ -226,6 +226,17 @@ describe('игровой сервер', () => {
     expect(next.phase).toBe('playing');
   });
 
+  it('сдаться: раздача кончается, а следующая в той же комнате начинается сама', async () => {
+    const { anna, boris } = await startedRoom();
+    await boris.view();
+    boris.send({ t: 'resign' });
+    const over = await anna.view((v) => v.phase === 'over');
+    expect(over.loser).toBe(1);
+    expect(over.players[1].losses).toBe(1);
+    const next = await anna.view((v) => v.dealNo === 2);
+    expect(next.phase).toBe('playing');
+  });
+
   it('отвечает меню, что жив, и сколько людей ищут соперника', async () => {
     const anna = await connect();
     anna.send({ t: 'quick', name: 'Анна' });

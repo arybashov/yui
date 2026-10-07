@@ -1,6 +1,6 @@
 import { GAME_TITLE } from '../config';
 import { BotLevel, chooseMove } from './bot';
-import { Card, GameState, LogEntry, Move, applyMove, deal } from './engine';
+import { Card, GameState, LogEntry, Move, applyMove, deal, resign } from './engine';
 
 export interface PlayerInfo {
   /** у ботов — служебное имя вида «Bot 1», на экране его переводит botName() */
@@ -39,6 +39,8 @@ export interface Session {
   subscribe(listener: (view: PlayerView) => void): () => void;
   move(move: Move): void;
   newDeal(): void;
+  /** сдаться в текущей раздаче; нет там, где сдаваться нельзя (обучение) */
+  resign?(): void;
   leave(): void;
   /** Остановить или продолжить ботов. Есть только там, где партию ведёт этот браузер. */
   pauseFor?(reason: PauseReason, on: boolean): void;
@@ -125,6 +127,20 @@ export class HostSession implements Session {
     if (this.state.phase === 'over' && this.state.loser !== null) {
       this.losses[this.state.loser]++;
     }
+    this.broadcast();
+  }
+
+  resign(): void {
+    this.handleResign(this.localSeat);
+  }
+
+  /** Игрок сдался: проигрывает раздачу и получает букву. */
+  handleResign(seat: number): void {
+    const next = resign(this.state, seat);
+    if (next === this.state) return;
+    this.state = next;
+    this.actions[seat]++;
+    this.losses[seat]++;
     this.broadcast();
   }
 

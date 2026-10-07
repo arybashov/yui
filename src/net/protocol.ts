@@ -25,6 +25,8 @@ export type ClientMessage =
   | { t: 'start'; bots: number; level: BotLevel }
   | { t: 'move'; move: Move }
   | { t: 'newDeal' }
+  /** сдаться в текущей раздаче */
+  | { t: 'resign' }
   /** меню спрашивает, жив ли сервер и сколько на нём людей */
   | { t: 'ping' }
   /** вкладка видима/скрыта — для учёта времени в игре */
