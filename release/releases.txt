@@ -6,3 +6,4 @@
 2026-10-06 09:50  v1.0.6  YUI_yandex_v1.0.6.zip  1.87 МБ  git 4cfca86
 2026-10-06 12:44  v1.0.7  YUI_yandex_v1.0.7.zip  1.87 МБ  git 5408baa
 2026-10-06 15:01  v1.0.8  YUI_yandex_v1.0.8.zip  1.87 МБ  git 348e8e2
+2026-10-07 11:57  v1.0.9  YUI_yandex_v1.0.9.zip  1.87 МБ  git 9bcddeb
