@@ -141,6 +141,9 @@ export interface Dict {
   room: string;
   copyLink: string;
   linkCopied: string;
+  /** Telegram: кнопка и текст приглашения в окне «Поделиться» */
+  inviteFriend: string;
+  inviteText: string;
   shareHint: string;
   shareHintHost: string;
   players: string;

@@ -1,3 +1,4 @@
+import { platformVibrate } from '../platform';
 import { Store } from '../store';
 
 // Вибрация на телефоне — как в «Городках»: короткий отклик, его можно выключить.
@@ -32,6 +33,8 @@ export function setHapticsEnabled(enabled: boolean): void {
 }
 
 export function vibrate(pattern: number | number[]): void {
+  if (!hapticsSetting.get().enabled || document.hidden) return;
+  if (platformVibrate()) return;
   if (!hapticsSupported || !hapticsSetting.get().enabled || document.hidden) return;
   try {
     navigator.vibrate(pattern);

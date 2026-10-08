@@ -3,7 +3,7 @@ import { GAME_TITLE } from '../config';
 import { Card, legalMoves, takeCount } from '../game/engine';
 import { PlayerInfo, PlayerView, Session } from '../game/session';
 import { useT } from '../i18n';
-import { markGameplay, showInterstitial } from '../platform/yandex';
+import { markGameplay, showInterstitial } from '../platform';
 import { useCardAnimations } from './animations';
 import { CardBack, CardView } from './CardView';
 import { playSound } from './sound';

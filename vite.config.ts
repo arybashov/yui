@@ -21,10 +21,19 @@ const yandexSdk = (mode: string): Plugin => ({
     mode === 'yandex' ? [{ tag: 'script', attrs: { src: '/sdk.js' }, injectTo: 'head' }] : [],
 });
 
+/** Сборка для Telegram (`--mode telegram`): SDK Mini Apps подключается тегом с telegram.org до кода игры. */
+const telegramSdk = (mode: string): Plugin => ({
+  name: 'telegram-web-app-sdk',
+  transformIndexHtml: () =>
+    mode === 'telegram'
+      ? [{ tag: 'script', attrs: { src: 'https://telegram.org/js/telegram-web-app.js' }, injectTo: 'head' }]
+      : [],
+});
+
 export default defineConfig(({ mode }) => ({
   // относительные пути, чтобы сборку можно было положить на любой статический хостинг
   base: './',
-  plugins: [react(), yandexSdk(mode)],
+  plugins: [react(), yandexSdk(mode), telegramSdk(mode)],
   define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   // без явного адреса Vite на Windows слушает только IPv6, и http://127.0.0.1 не открывается
   server: { host: '127.0.0.1', port: 5173, strictPort: true },

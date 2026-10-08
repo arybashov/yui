@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "build:yandex": "tsc --noEmit && vite build --mode yandex --outDir dist-yandex",
+    "build:telegram": "tsc --noEmit && vite build --mode telegram --outDir dist-telegram",
     "build:server": "esbuild server/main.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist-server/server.cjs",
     "server": "npm run build:server && node dist-server/server.cjs",
     "release:yandex": "python scripts/release-yandex.py"

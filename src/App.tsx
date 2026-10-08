@@ -5,7 +5,7 @@ import { useT } from './i18n';
 import { OnlineRoom, SERVER_URL } from './net/online';
 import { normalizeRoomCode } from './net/protocol';
 import { GuestClient, HostRoom } from './net/room';
-import { IS_YANDEX, invitePayload, platformPause } from './platform/yandex';
+import { IS_YANDEX, invitePayload, platformPause, platformPlayerName } from './platform';
 import { Menu } from './ui/Menu';
 import { GuestScreen, HostScreen, OnlineScreen } from './ui/Online';
 import { Table } from './ui/Table';
@@ -43,9 +43,9 @@ const ONLINE_AVAILABLE = Boolean(SERVER_URL) || !IS_YANDEX;
 
 function loadName(): string {
   try {
-    return localStorage.getItem(NAME_KEY) ?? '';
+    return localStorage.getItem(NAME_KEY) ?? platformPlayerName();
   } catch {
-    return '';
+    return platformPlayerName();
   }
 }
 

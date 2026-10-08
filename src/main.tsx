@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { chooseLang } from './i18n';
-import { gameReady, initPlatform, platformPause } from './platform/yandex';
+import { gameReady, initPlatform, platformPause } from './platform';
 import { preloadCards } from './ui/CardView';
 import { startAutoFit } from './ui/fit';
 import { setSoundSilenced } from './ui/sound';

@@ -15,9 +15,9 @@ export function analyticsIdentity(visitorId: string | undefined): string | null 
   return 'guest:' + createHash('sha256').update(visitorId).digest('hex');
 }
 
-export type Platform = 'site' | 'yandex' | 'local' | 'unknown';
+export type Platform = 'site' | 'yandex' | 'telegram' | 'local' | 'unknown';
 export const platformOf = (p: string | undefined): Platform =>
-  p === 'site' || p === 'yandex' || p === 'local' ? p : 'unknown';
+  p === 'site' || p === 'yandex' || p === 'telegram' || p === 'local' ? p : 'unknown';
 
 export interface PulseClient {
   identity: string | null;
@@ -185,7 +185,7 @@ export function createStats(file: string, now: () => number = Date.now) {
 
   const summary = (daysArg?: unknown, platformArg?: unknown, modeArg?: unknown) => {
     const days = [7, 30, 90].includes(Number(daysArg)) ? Number(daysArg) : 30;
-    const platform = ['site', 'yandex', 'local'].includes(String(platformArg)) ? String(platformArg) : 'all';
+    const platform = ['site', 'yandex', 'telegram', 'local'].includes(String(platformArg)) ? String(platformArg) : 'all';
     const mode = ['pvp', 'ai', 'tutorial'].includes(String(modeArg)) ? String(modeArg) : 'all';
     const time = now();
     const end = dayOf(time);

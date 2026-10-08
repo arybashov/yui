@@ -32,6 +32,10 @@ jobs:
       - run: npm run build
         env:
           VITE_SERVER_URL: wss://${{ env.YUI_DOMAIN }}/ws
+      # Mini App для Telegram (@yui_cards_bot) — та же игра в папке /tg/ сайта
+      - run: npx vite build --mode telegram --outDir dist/tg
+        env:
+          VITE_SERVER_URL: wss://${{ env.YUI_DOMAIN }}/ws
       - run: npm run build:server
       - run: tar -czf site.tar.gz -C dist .
       - name: Publish the latest build

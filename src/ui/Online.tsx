@@ -5,7 +5,7 @@ import { Session } from '../game/session';
 import { useT } from '../i18n';
 import { OnlineRoom, OnlineState, RETRYABLE_ERRORS } from '../net/online';
 import { GuestClient, GuestState, HostRoom, HostRoomState } from '../net/room';
-import { inviteLink } from '../platform/yandex';
+import { IS_TELEGRAM, inviteLink, shareInvite } from '../platform';
 import { botLevels } from './Menu';
 import { Table } from './Table';
 
@@ -29,6 +29,7 @@ function Lobby({ code, names, you, onStart, hint }: LobbyProps) {
   const total = names.length + botCount;
 
   const copy = async () => {
+    if (shareInvite(code, t.inviteText)) return;
     try {
       await navigator.clipboard.writeText(inviteLink(code));
       setCopied(true);
@@ -43,7 +44,7 @@ function Lobby({ code, names, you, onStart, hint }: LobbyProps) {
         <span className="muted">{t.roomCode}</span>
         <div className="room-code">{code}</div>
         <button type="button" className="btn wide" onClick={copy}>
-          {copied ? t.linkCopied : t.copyLink}
+          {IS_TELEGRAM ? t.inviteFriend : copied ? t.linkCopied : t.copyLink}
         </button>
         {hint && <p className="muted hint">{hint}</p>}
       </div>

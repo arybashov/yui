@@ -174,6 +174,8 @@ export const en: Dict = {
   room: 'Room',
   copyLink: 'Copy link',
   linkCopied: 'Link copied',
+  inviteFriend: 'Invite a friend',
+  inviteText: 'Join my YUI game!',
   shareHint: 'Send the link or the code to your friends.',
   shareHintHost: 'Send the link or the code to your friends. Keep this tab open — it runs the game.',
   players: 'Players',

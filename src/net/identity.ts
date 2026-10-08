@@ -1,5 +1,5 @@
 import { APP_VERSION } from '../config';
-import { IS_YANDEX } from '../platform/yandex';
+import { IS_TELEGRAM, IS_YANDEX } from '../platform';
 import { ClientMeta } from './protocol';
 
 // Анонимный идентификатор посетителя для статистики (не аккаунт). Хранится в
@@ -34,6 +34,7 @@ function visitorId(): string {
 
 function platform(): string {
   if (IS_YANDEX) return 'yandex';
+  if (IS_TELEGRAM) return 'telegram';
   const host = location.hostname;
   if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local') || host.endsWith('.test')) {
     return 'local';
