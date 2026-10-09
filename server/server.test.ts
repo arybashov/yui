@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { once } from 'node:events';
 import { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -295,5 +296,38 @@ describe('игровой сервер', () => {
     const vera = await connect();
     vera.send({ t: 'quick', name: 'Вера' });
     expect((await vera.next('lobby')).names).toEqual(['Анна', 'Вера']);
+  });
+});
+
+describe('присутствие вне онлайна', () => {
+  const meta = { visitorId: 'visitor-telegram-1', platform: 'telegram', version: 'test' };
+
+  it('игра с ботами и меню попадают в статистику с площадкой и режимом', async () => {
+    const statsFile = join(tmpdir(), `yui-presence-${process.pid}-${Date.now()}.json`);
+    const server = startServer({ port: 0, pulseMs: 30, statsFile });
+    await once(server.http, 'listening');
+    const player = await new Player(`ws://127.0.0.1:${(server.http.address() as AddressInfo).port}`).open();
+    player.send({ t: 'presence', activity: 'ai', engaged: true, ...meta });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    player.socket.terminate();
+    await server.close();
+    const rows = JSON.parse(readFileSync(statsFile, 'utf8')).daily;
+    expect(rows).toContainEqual(expect.objectContaining({ platform: 'telegram', mode: 'ai', played: 1 }));
+  });
+
+  it('«сейчас онлайн» не считает самого спрашивающего и его второе соединение', async () => {
+    const server = startServer({ port: 0, statsFile: join(tmpdir(), `yui-online-${process.pid}-${Date.now()}.json`) });
+    await once(server.http, 'listening');
+    const url = `ws://127.0.0.1:${(server.http.address() as AddressInfo).port}`;
+    const presence = await new Player(url).open();
+    presence.send({ t: 'presence', activity: 'menu', ...meta });
+    const other = await new Player(url).open();
+    other.send({ t: 'presence', activity: 'menu', ...meta, visitorId: 'visitor-someone-else' });
+    const menu = await new Player(url).open();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    menu.send({ t: 'ping', ...meta });
+    expect((await menu.next('status')).online).toBe(1);
+    [presence, other, menu].forEach((p) => p.socket.terminate());
+    await server.close();
   });
 });

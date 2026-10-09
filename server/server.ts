@@ -5,6 +5,7 @@ import { BotLevel } from '../src/game/bot';
 import { MAX_PLAYERS, MIN_PLAYERS, Move } from '../src/game/engine';
 import { HostSeat, HostSession, botSeatName } from '../src/game/session';
 import {
+  Activity,
   ClientMessage,
   NAME_LENGTH,
   ServerMessage,
@@ -66,12 +67,16 @@ interface Conn {
   platform: Platform;
   version: string;
   visible: boolean;
+  /** чем занят вне онлайн-комнаты (сообщение presence); в онлайн-комнате главнее она */
+  activity: Activity | null;
+  engaged: boolean;
   connectedAt: number;
   lastSeen: number;
   room: Room | null;
   member: Member | null;
 }
 
+const ACTIVITIES: Activity[] = ['menu', 'ai', 'tutorial'];
 const MAX_ROOMS = 500;
 const MAX_MESSAGE_BYTES = 4096;
 const PING_INTERVAL_MS = 30000;
@@ -375,7 +380,8 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
 
   /** Обновить идентификацию соединения из входящего сообщения. */
   const applyMeta = (conn: Conn | undefined, m: ClientMessage) => {
-    if (!conn || (m.t !== 'create' && m.t !== 'join' && m.t !== 'quick' && m.t !== 'rejoin')) return;
+    if (!conn) return;
+    if (m.t !== 'create' && m.t !== 'join' && m.t !== 'quick' && m.t !== 'rejoin' && m.t !== 'ping' && m.t !== 'presence') return;
     if (typeof m.visitorId === 'string' && m.visitorId.length <= 64) conn.visitorId = m.visitorId;
     const p = platformOf(m.platform);
     if (p !== 'unknown') conn.platform = p;
@@ -391,7 +397,19 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       const searching = [...rooms.values()]
         .filter((r) => r.quick && !r.session)
         .reduce((n, r) => n + r.members.filter((m) => m.socket).length, 0);
-      return send(socket, { t: 'status', online: Math.max(0, conns.size - 1), searching });
+      // одного посетителя с несколькими соединениями (меню + присутствие) считаем один раз, себя — нет
+      const me = conn?.visitorId;
+      const others = new Set<unknown>();
+      for (const [s, c] of conns) if (s !== socket && !(me && c.visitorId === me)) others.add(c.visitorId || s);
+      return send(socket, { t: 'status', online: others.size, searching });
+    }
+
+    if (message.t === 'presence') {
+      if (conn && ACTIVITIES.includes(message.activity)) {
+        conn.activity = message.activity;
+        conn.engaged = Boolean(message.engaged);
+      }
+      return;
     }
 
     if (message.t === 'visible') {
@@ -525,6 +543,8 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       platform: 'unknown',
       version: '',
       visible: true,
+      activity: null,
+      engaged: false,
       connectedAt: now,
       lastSeen: now,
       room: null,
@@ -564,8 +584,13 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       if (!identity) continue;
       let playing = false;
       let engaged = false;
-      let mode: 'pvp' | 'ai' = 'pvp';
-      if (conn.room?.session && conn.member) {
+      let mode: 'pvp' | 'ai' | 'tutorial' = 'pvp';
+      if (!conn.room && (conn.activity === 'ai' || conn.activity === 'tutorial')) {
+        // игра с ботами и обучение идут в браузере, сервер знает о них только из presence
+        mode = conn.activity;
+        playing = true;
+        engaged = conn.engaged;
+      } else if (conn.room?.session && conn.member) {
         const snap = conn.room.session.snapshot();
         const seat = conn.room.members.indexOf(conn.member);
         const me = snap.players[seat];

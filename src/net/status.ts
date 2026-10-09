@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { clientMeta } from './identity';
 import { ServerMessage } from './protocol';
 
 // Индикатор в меню: доступен ли игровой сервер прямо сейчас. Проверяется тем же
@@ -31,7 +32,7 @@ function probe(url: string): Promise<ServerStatus> {
       resolve(status);
     };
     const timer = setTimeout(() => finish({ kind: 'offline' }), CHECK_TIMEOUT_MS);
-    socket.onopen = () => socket.send(JSON.stringify({ t: 'ping' }));
+    socket.onopen = () => socket.send(JSON.stringify({ t: 'ping', ...clientMeta() }));
     socket.onmessage = (event) => {
       try {
         const message = JSON.parse(String(event.data)) as ServerMessage;

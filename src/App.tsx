@@ -3,6 +3,7 @@ import { BotLevel } from './game/bot';
 import { HostSeat, HostSession, botSeatName } from './game/session';
 import { useT } from './i18n';
 import { OnlineRoom, SERVER_URL } from './net/online';
+import { setActivity } from './net/presence';
 import { normalizeRoomCode } from './net/protocol';
 import { GuestClient, HostRoom } from './net/room';
 import { IS_YANDEX, invitePayload, platformPause, platformPlayerName } from './platform';
@@ -81,6 +82,20 @@ function Screens() {
     if (!localSession) return;
     return platformPause.subscribe(({ paused }) => localSession.pauseFor('platform', paused));
   }, [localSession]);
+
+  // Для статистики: чем игрок занят вне онлайна. В игре с ботами — ещё и сделал ли он ход.
+  const tutorial = screen.kind === 'tutorial';
+  useEffect(() => {
+    if (tutorial) return setActivity('tutorial');
+    if (!localSession) return setActivity('menu');
+    let engaged = false;
+    setActivity('ai');
+    return localSession.subscribe((view) => {
+      if (engaged || !view.log.some((entry) => entry.player === view.seat)) return;
+      engaged = true;
+      setActivity('ai', true);
+    });
+  }, [localSession, tutorial]);
 
   // Пока телефон лежит горизонтально и игра закрыта заслонкой, боты тоже ждут.
   useEffect(() => {

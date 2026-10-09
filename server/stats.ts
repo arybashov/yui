@@ -27,7 +27,7 @@ export interface PulseClient {
   lastSeen: number;
   playing: boolean;
   /** режим текущей партии, если играет */
-  mode: 'pvp' | 'ai';
+  mode: 'pvp' | 'ai' | 'tutorial';
   /** сделал ли сегодня ход */
   engaged: boolean;
 }

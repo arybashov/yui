@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { chooseLang } from './i18n';
+import { startPresence } from './net/presence';
 import { gameReady, initPlatform, platformPause } from './platform';
 import { preloadCards } from './ui/CardView';
 import { startAutoFit } from './ui/fit';
@@ -63,6 +64,8 @@ function hideSplash(): Promise<void> {
 async function start(): Promise<void> {
   // язык площадки нужен до первой отрисовки, иначе интерфейс мигнёт другим языком
   await initPlatform();
+  // после площадки: она определяет платформу, которую присутствие сообщает серверу
+  startPresence();
   watchFocus();
   blockContextMenu();
 

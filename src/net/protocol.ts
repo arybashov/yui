@@ -9,11 +9,14 @@ import { NetError } from '../i18n/types';
 export interface ClientMeta {
   /** анонимный идентификатор посетителя (из localStorage), не аккаунт */
   visitorId?: string;
-  /** площадка: site (сайт), yandex (Яндекс Игры), local (разработка) */
+  /** площадка: site (сайт), yandex (Яндекс Игры), telegram (Telegram), local (разработка) */
   platform?: string;
   /** версия клиента */
   version?: string;
 }
+
+/** Чем игрок занят вне онлайн-комнаты. */
+export type Activity = 'menu' | 'ai' | 'tutorial';
 
 export type ClientMessage =
   | ({ t: 'create'; name: string } & ClientMeta)
@@ -28,7 +31,10 @@ export type ClientMessage =
   /** сдаться в текущей раздаче */
   | { t: 'resign' }
   /** меню спрашивает, жив ли сервер и сколько на нём людей */
-  | { t: 'ping' }
+  | ({ t: 'ping' } & ClientMeta)
+  /** где игрок вне онлайна: в меню, играет с ботами или в обучении (для статистики);
+   *  engaged — сделал ход в текущей партии */
+  | ({ t: 'presence'; activity: Activity; engaged?: boolean } & ClientMeta)
   /** вкладка видима/скрыта — для учёта времени в игре */
   | { t: 'visible'; visible: boolean };
 

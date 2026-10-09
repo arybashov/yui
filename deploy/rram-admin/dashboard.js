@@ -1,7 +1,7 @@
 const $ = id => document.getElementById(id);
 const nf = new Intl.NumberFormat('ru-RU');
 const names = new Intl.DisplayNames(['ru'],{type:'region'});
-const platformNames={site:'RRaM',yandex:'Яндекс Игры',crazygames:'CrazyGames',local:'Локально',unknown:'Не определена'};
+const platformNames={site:'RRaM',yandex:'Яндекс Игры',crazygames:'CrazyGames',telegram:'Telegram',local:'Локально',unknown:'Не определена'};
 const modeNames={pvp:'PvP',ai:'Против ИИ',tutorial:'Обучение',lobby:'Лобби / просмотр'};
 const date=t=>new Date(t).toLocaleString('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 const duration=s=>s==null?'—':s>=3600?(s/3600).toFixed(1)+' ч':s>=60?Math.round(s/60)+' мин':Math.round(s)+' с';
@@ -16,6 +16,15 @@ function applyGame(){
  const g=GAMES[game];
  platformNames.site=g.site;
  const siteOption=document.querySelector('#platform option[value="site"]');if(siteOption)siteOption.textContent=g.site;
+ // площадки у игр разные: YUI есть в Telegram, но нет на CrazyGames
+ const select=$('platform');
+ if(select){
+  let tg=select.querySelector('option[value="telegram"]');
+  if(!tg){tg=document.createElement('option');tg.value='telegram';tg.textContent='Telegram';select.querySelector('option[value="local"]')?.before(tg);}
+  const hide={telegram:game!=='yui',crazygames:game==='yui'};
+  for(const [value,hidden] of Object.entries(hide)){const o=select.querySelector(`option[value="${value}"]`);if(o){o.hidden=hidden;o.disabled=hidden;}}
+  if(select.selectedOptions[0]?.disabled)select.value='all';
+ }
  const brand=document.querySelector('header .brand');if(brand&&brand.firstChild&&brand.firstChild.nodeType===3)brand.firstChild.nodeValue=g.name+' ';
  document.title=g.name+' · Статистика игры';
  document.querySelectorAll('.game-switch button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.game===game)));
