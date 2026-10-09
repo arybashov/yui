@@ -134,6 +134,24 @@ function scenes(): Record<string, Scene> {
         dealNo: 5,
       }),
     },
+    // конец матча: вы выиграли больше всех раздач (для проверки, не для каталога)
+    'result-match': {
+      view: view({
+        players: [
+          player(n.you, 0, { place: 1, wins: 3 }),
+          player(n.a, 0, { place: 2, losses: 1, wins: 2 }),
+          player(n.b, 3, { losses: 3 }),
+        ],
+        hand: [],
+        pile: cards('10S JH QD KS AD AC'),
+        log: [play(0, 'AC')],
+        phase: 'over',
+        loser: 2,
+        matchLoser: 2,
+        matchWinners: [0],
+        dealNo: 5,
+      }),
+    },
     // то же в сетевой игре: следующая раздача начнётся сама (для проверки, не для каталога)
     'result-online': {
       view: view({

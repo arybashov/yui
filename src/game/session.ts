@@ -13,6 +13,8 @@ export interface PlayerInfo {
   place: number | null;
   /** проигранные раздачи в текущем матче: за каждую игрок получает букву названия */
   losses: number;
+  /** выигранные раздачи в текущем матче: игрок вышел первым. У старого сервера поля нет. */
+  wins?: number;
 }
 
 /** То, что видит один игрок: чужие руки — только количеством карт. */
@@ -30,6 +32,9 @@ export interface PlayerView {
   dealNo: number;
   /** кто собрал все буквы и проиграл матч; следующая раздача начнёт новый матч */
   matchLoser: number | null;
+  /** победители матча (больше всех выигранных раздач, при равенстве — меньше букв); пусто, пока матч идёт.
+   *  У старого сервера поля нет. */
+  matchWinners?: number[];
   canRestart: boolean;
   /** через сколько мс следующая раздача начнётся сама (сетевая игра), иначе null */
   nextDealIn: number | null;
@@ -74,11 +79,21 @@ export interface HostOptions {
 const LOG_TAIL = 6;
 export const LOSSES_TO_LOSE_MATCH = GAME_TITLE.length;
 
+/** Победители матча: больше всех выигранных раздач, при равенстве — меньше букв; при полном равенстве — все они.
+ *  Проигравший матч (собрал все буквы) победителем не бывает. */
+export function matchWinners(wins: number[], losses: number[], loser: number): number[] {
+  const rivals = wins.map((_, seat) => seat).filter((seat) => seat !== loser);
+  const best = (a: number, b: number) => wins[b] - wins[a] || losses[a] - losses[b];
+  const top = rivals.slice().sort(best)[0];
+  return top === undefined ? [] : rivals.filter((seat) => best(seat, top) === 0);
+}
+
 /** Ведёт партию: локальную с ботами, сетевую на стороне хоста и на игровом сервере
  *  (там локального игрока нет, все места — удалённые или боты). */
 export class HostSession implements Session {
   private state: GameState;
   private losses: number[];
+  private wins: number[];
   private dealNo = 1;
   private listeners = new Set<(view: PlayerView) => void>();
   private botTimer: ReturnType<typeof setTimeout> | null = null;
@@ -98,6 +113,7 @@ export class HostSession implements Session {
     this.localSeat = seats.findIndex((s) => s.kind === 'local');
     this.ownerSeat = options.ownerSeat ?? this.localSeat;
     this.losses = seats.map(() => 0);
+    this.wins = seats.map(() => 0);
     this.actions = seats.map(() => 0);
     this.state = deal(seats.length);
   }
@@ -127,6 +143,7 @@ export class HostSession implements Session {
     if (this.state.phase === 'over' && this.state.loser !== null) {
       this.losses[this.state.loser]++;
     }
+    if (this.state.phase === 'over') this.countWin();
     this.broadcast();
   }
 
@@ -141,7 +158,14 @@ export class HostSession implements Session {
     this.state = next;
     this.actions[seat]++;
     this.losses[seat]++;
+    this.countWin();
     this.broadcast();
+  }
+
+  /** Раздачу выигрывает вышедший первым; если раздача кончилась сдачей раньше, победы нет. */
+  private countWin(): void {
+    const first = this.state.finished[0];
+    if (first !== undefined) this.wins[first]++;
   }
 
   newDeal(): void {
@@ -149,6 +173,7 @@ export class HostSession implements Session {
     this.cancelNextDeal();
     if (this.matchLoser() !== null) {
       this.losses = this.seats.map(() => 0);
+      this.wins = this.seats.map(() => 0);
       this.dealNo = 0;
     }
     this.state = deal(this.seats.length);
@@ -237,6 +262,11 @@ export class HostSession implements Session {
     return seat >= 0 ? seat : null;
   }
 
+  private currentMatchWinners(): number[] {
+    const loser = this.state.phase === 'over' ? this.matchLoser() : null;
+    return loser === null ? [] : matchWinners(this.wins, this.losses, loser);
+  }
+
   private viewFor(seat: number): PlayerView {
     const { state } = this;
     return {
@@ -248,6 +278,7 @@ export class HostSession implements Session {
         count: state.hands[i].length,
         place: state.finished.includes(i) ? state.finished.indexOf(i) + 1 : null,
         losses: this.losses[i],
+        wins: this.wins[i],
       })),
       hand: state.hands[seat],
       pile: state.pile,
@@ -258,6 +289,7 @@ export class HostSession implements Session {
       moveNo: state.log.length,
       dealNo: this.dealNo,
       matchLoser: this.state.phase === 'over' ? this.matchLoser() : null,
+      matchWinners: this.currentMatchWinners(),
       canRestart: this.canRestart(seat),
       nextDealIn: this.nextDealAt === null ? null : Math.max(0, this.nextDealAt - Date.now()),
     };

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { chooseMove } from './bot';
-import { HostSeat, HostSession, PlayerView } from './session';
+import { HostSeat, HostSession, PlayerView, matchWinners } from './session';
 
 /** Сетевая партия двух людей, как на сервере; views — последний вид каждого. */
 function onlineTable(options: { anyoneRestarts?: boolean; autoNextDealMs?: number } = {}) {
@@ -81,5 +81,36 @@ describe('сетевая партия между раздачами', () => {
     expect(views[0].dealNo).toBe(2);
     expect(views[0].phase).toBe('playing');
     session.leave();
+  });
+});
+
+describe('победы и победитель матча', () => {
+  it('побеждает тот, у кого больше выигранных раздач', () => {
+    expect(matchWinners([1, 3, 0], [3, 1, 2], 0)).toEqual([1]);
+  });
+
+  it('при равных победах — у кого меньше букв', () => {
+    expect(matchWinners([2, 2, 0], [1, 2, 3], 2)).toEqual([0]);
+  });
+
+  it('при полном равенстве победа общая, проигравший в победители не попадает', () => {
+    expect(matchWinners([3, 1, 1], [3, 1, 1], 0)).toEqual([1, 2]);
+  });
+
+  it('раздачу выигрывает вышедший первым, к концу матча счёт побед сходится с числом раздач', () => {
+    const { session, views, finishDeal } = onlineTable();
+    for (let n = 0; n < 50 && views[0].matchLoser === null; n++) {
+      if (n > 0) session.requestNewDeal(0);
+      finishDeal();
+    }
+    const view = views[0];
+    expect(view.matchLoser).not.toBeNull();
+    const wins = view.players.map((p) => p.wins ?? 0);
+    // с двумя игроками у каждой раздачи без сдачи ровно один победитель
+    expect(wins[0] + wins[1]).toBe(view.dealNo);
+    expect(view.matchWinners).toEqual([1 - view.matchLoser!]);
+    session.requestNewDeal(0);
+    expect(views[0].players.map((p) => p.wins)).toEqual([0, 0]);
+    expect(views[0].matchWinners).toEqual([]);
   });
 });

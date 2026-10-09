@@ -112,6 +112,14 @@ export function shareInvite(code: string, text: string): boolean {
   return true;
 }
 
+/** Поделиться итогом матча: окно «Поделиться» со ссылкой, которая открывает игру. false — не в Telegram. */
+export function shareResult(text: string): boolean {
+  if (!app) return false;
+  const url = encodeURIComponent(`https://t.me/${BOT}?startapp`);
+  app.openTelegramLink(`https://t.me/share/url?url=${url}&text=${encodeURIComponent(text)}`);
+  return true;
+}
+
 /** Имя игрока в Telegram — ник по умолчанию, пока игрок не ввёл свой. */
 export function platformPlayerName(): string {
   return app?.initDataUnsafe.user?.first_name?.trim().slice(0, 16) ?? '';

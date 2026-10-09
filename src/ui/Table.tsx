@@ -3,13 +3,14 @@ import { GAME_TITLE } from '../config';
 import { Card, legalMoves, takeCount } from '../game/engine';
 import { PlayerInfo, PlayerView, Session } from '../game/session';
 import { useT } from '../i18n';
-import { markGameplay, showInterstitial } from '../platform';
+import { CAN_SHARE_RESULT, markGameplay, shareResult, showInterstitial } from '../platform';
 import { useCardAnimations } from './animations';
 import { CardBack, CardView } from './CardView';
 import { playSound } from './sound';
 import { Rules } from './Rules';
 import { SoundToggle } from './SoundToggle';
 import { vibrate } from './haptics';
+import { currentStreak, recordMatch } from './streak';
 import { describeAction, playerName, rankLabel } from './text';
 
 interface TableProps {
@@ -296,6 +297,7 @@ function playViewSounds(before: PlayerView | null, view: PlayerView, tutorial: b
     else if (view.loser === me) result = 'lose';
     else if (view.players[me].place === 1) result = 'win';
     playSound(result, { delay: 0.4 });
+    if (view.matchLoser !== null && !tutorial) recordMatch((view.matchWinners ?? []).includes(me));
   } else if (myTurn && !tutorial) {
     playSound('turn', { delay: TURN_SOUND_DELAY });
     vibrate(40);
@@ -385,9 +387,21 @@ function Result({
   const autoSeconds = useCountdown(view.nextDealIn);
   const last = view.log.at(-1);
   const resigned = last?.type === 'resign' ? last.player : null;
+  const winners = view.matchWinners ?? [];
   let title: string;
-  if (view.matchLoser === me) title = t.resultMatchLostYou(GAME_TITLE);
-  else if (view.matchLoser !== null) title = t.resultMatchLost(playerName(view.players[view.matchLoser], t), GAME_TITLE);
+  // конец матча: заголовок — победитель, строкой ниже — кто собрал буквы
+  let subtitle: string | null = null;
+  if (view.matchLoser !== null) {
+    subtitle =
+      view.matchLoser === me
+        ? t.resultMatchLostYou(GAME_TITLE)
+        : t.resultMatchLost(playerName(view.players[view.matchLoser], t), GAME_TITLE);
+  }
+  const winnerNames = winners.map((seat) => (seat === me ? `${view.players[seat].name} ${t.youSuffix}` : playerName(view.players[seat], t)));
+  if (view.matchLoser !== null && winners.length > 1) title = t.matchWinnersShared(winnerNames.join(', '));
+  else if (view.matchLoser !== null && winners[0] === me) title = t.matchWinnerYou;
+  else if (view.matchLoser !== null && winners.length === 1) title = t.matchWinner(winnerNames[0]);
+  else if (view.matchLoser !== null) title = subtitle!;
   else if (resigned === me) title = t.logYouResign;
   else if (resigned !== null) title = t.logResign(playerName(view.players[resigned], t));
   else if (view.loser === null) title = t.resultDraw;
@@ -403,11 +417,13 @@ function Result({
     <div className="overlay">
       <div className="panel result">
         <h2>{title}</h2>
+        {subtitle && subtitle !== title && <p className="muted">{subtitle}</p>}
         <table>
           <thead>
             <tr>
               <th>{t.colPlayer}</th>
               <th>{t.colOutcome}</th>
+              <th>{t.colWins}</th>
               <th>{t.colLetters}</th>
             </tr>
           </thead>
@@ -418,6 +434,7 @@ function Result({
                 <td>
                   {player.place !== null ? t.wentOut(player.place) : seat === resigned ? t.resignedOutcome : t.leftWithCards}
                 </td>
+                <td>{player.wins ?? 0}</td>
                 <td className="letters">{letters(player.losses) || '—'}</td>
               </tr>
             ))}
@@ -438,7 +455,30 @@ function Result({
             {t.toMenu}
           </button>
         </div>
+        {matchOver && CAN_SHARE_RESULT && (
+          <button type="button" className="btn wide" onClick={() => shareResult(shareText(view, t))}>
+            {t.shareResult}
+          </button>
+        )}
       </div>
     </div>
   );
+}
+
+/** Текст «Поделиться результатом»: победа в матче или выигранные раздачи, буквы и серия побед от двух. */
+function shareText(view: PlayerView, t: ReturnType<typeof useT>): string {
+  if (view.matchLoser === view.seat) return t.shareLost(GAME_TITLE);
+  const me = view.players[view.seat];
+  const wins = me.wins ?? 0;
+  const mine = letters(me.losses);
+  const won = (view.matchWinners ?? []).includes(view.seat);
+  const streak = currentStreak();
+  return [
+    won ? t.shareWon(GAME_TITLE, wins, view.dealNo) : wins > 0 ? t.shareWins(GAME_TITLE, wins) : t.sharePlayed(GAME_TITLE),
+    mine ? t.shareLetters(mine) : t.shareClean,
+    won && streak >= 2 ? t.shareStreak(streak) : '',
+    t.shareChallenge,
+  ]
+    .filter(Boolean)
+    .join(' ');
 }

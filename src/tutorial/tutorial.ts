@@ -96,7 +96,7 @@ export class TutorialSession implements Session {
 
   private view(): PlayerView {
     const { step, solved } = this.coach.get();
-    const player = { isBot: false, away: false, place: null, losses: 0 };
+    const player = { isBot: false, away: false, place: null, losses: 0, wins: 0 };
     return {
       seat: STUDENT,
       players: [

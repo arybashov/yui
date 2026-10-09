@@ -7,6 +7,8 @@ import * as yandex from './yandex';
 
 export const IS_TELEGRAM = telegram.IS_TELEGRAM;
 export const IS_YANDEX = yandex.IS_YANDEX;
+/** Кнопку «Поделиться результатом» показываем только там, где есть окно «Поделиться». */
+export const CAN_SHARE_RESULT = IS_TELEGRAM;
 
 const active = IS_TELEGRAM ? telegram : yandex;
 
@@ -20,5 +22,6 @@ export const inviteLink = active.inviteLink;
 
 // Только в Telegram: окно «Поделиться», имя игрока, вибрация через клиент.
 export const shareInvite: (code: string, text: string) => boolean = IS_TELEGRAM ? telegram.shareInvite : () => false;
+export const shareResult: (text: string) => boolean = IS_TELEGRAM ? telegram.shareResult : () => false;
 export const platformPlayerName: () => string = IS_TELEGRAM ? telegram.platformPlayerName : () => '';
 export const platformVibrate: () => boolean = IS_TELEGRAM ? telegram.platformVibrate : () => false;

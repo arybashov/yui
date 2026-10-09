@@ -121,6 +121,11 @@ export interface Dict {
   colPlayer: string;
   colOutcome: string;
   colLetters: string;
+  colWins: string;
+  /** заголовок итогов матча: names — победители через запятую */
+  matchWinner: (names: string) => string;
+  matchWinnerYou: string;
+  matchWinnersShared: (names: string) => string;
   newDeal: string;
   newMatch: string;
   autoNextDeal: (seconds: number) => string;
@@ -144,6 +149,18 @@ export interface Dict {
   /** Telegram: кнопка и текст приглашения в окне «Поделиться» */
   inviteFriend: string;
   inviteText: string;
+  /** Telegram: «Поделиться результатом» в итогах матча; letters — буквы игрока, например «YU» */
+  shareResult: string;
+  /** wins — выигранные раздачи, deals — всего раздач в матче */
+  shareWon: (title: string, wins: number, deals: number) => string;
+  shareWins: (title: string, wins: number) => string;
+  sharePlayed: (title: string) => string;
+  shareLetters: (letters: string) => string;
+  shareClean: string;
+  /** n — побед в матчах подряд, от двух */
+  shareStreak: (n: number) => string;
+  shareChallenge: string;
+  shareLost: (title: string) => string;
   shareHint: string;
   shareHintHost: string;
   players: string;
