@@ -15,6 +15,8 @@ export interface PlayerInfo {
   losses: number;
   /** выигранные раздачи в текущем матче: игрок вышел первым. У старого сервера поля нет. */
   wins?: number;
+  /** поддержал игру в Telegram — у имени звёздочка */
+  supporter?: boolean;
 }
 
 /** То, что видит один игрок: чужие руки — только количеством карт. */
@@ -62,6 +64,8 @@ export interface HostSeat {
   send?: (view: PlayerView) => void;
   /** имя игрока, за которого временно играет бот, пока нет связи */
   human?: string;
+  /** поддержал игру в Telegram */
+  supporter?: boolean;
 }
 
 export interface HostOptions {
@@ -187,7 +191,7 @@ export class HostSession implements Session {
   detach(seat: number): void {
     const current = this.seats[seat];
     if (!current || current.kind !== 'remote') return;
-    this.seats[seat] = { name: current.name, kind: 'bot', human: current.name };
+    this.seats[seat] = { name: current.name, kind: 'bot', human: current.name, supporter: current.supporter };
     this.broadcast();
   }
 
@@ -204,7 +208,15 @@ export class HostSession implements Session {
     if (!current || current.kind === 'local') return;
     // настоящего бота игроком не подменяем
     if (current.kind === 'bot' && current.human === undefined) return;
-    this.seats[seat] = { name: current.human ?? current.name, kind: 'remote', send };
+    this.seats[seat] = { name: current.human ?? current.name, kind: 'remote', send, supporter: current.supporter };
+    this.broadcast();
+  }
+
+  /** Игрок поддержал игру (узнали уже за столом) — звёздочка появится у всех. */
+  setSupporter(seat: number): void {
+    const current = this.seats[seat];
+    if (!current || current.supporter) return;
+    current.supporter = true;
     this.broadcast();
   }
 
@@ -279,6 +291,7 @@ export class HostSession implements Session {
         place: state.finished.includes(i) ? state.finished.indexOf(i) + 1 : null,
         losses: this.losses[i],
         wins: this.wins[i],
+        ...(s.supporter ? { supporter: true } : {}),
       })),
       hand: state.hands[seat],
       pile: state.pile,

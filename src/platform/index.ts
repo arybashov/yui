@@ -24,4 +24,6 @@ export const inviteLink = active.inviteLink;
 export const shareInvite: (code: string, text: string) => boolean = IS_TELEGRAM ? telegram.shareInvite : () => false;
 export const shareResult: (text: string) => boolean = IS_TELEGRAM ? telegram.shareResult : () => false;
 export const platformPlayerName: () => string = IS_TELEGRAM ? telegram.platformPlayerName : () => '';
+export const telegramInitData: () => string = IS_TELEGRAM ? telegram.telegramInitData : () => '';
+export const openInvoice: (link: string) => Promise<string> = IS_TELEGRAM ? telegram.openInvoice : async () => 'failed';
 export const platformVibrate: () => boolean = IS_TELEGRAM ? telegram.platformVibrate : () => false;

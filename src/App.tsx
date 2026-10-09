@@ -3,7 +3,7 @@ import { BotLevel } from './game/bot';
 import { HostSeat, HostSession, botSeatName } from './game/session';
 import { useT } from './i18n';
 import { OnlineRoom, SERVER_URL } from './net/online';
-import { setActivity } from './net/presence';
+import { setActivity, supporterStatus } from './net/presence';
 import { normalizeRoomCode } from './net/protocol';
 import { GuestClient, HostRoom } from './net/room';
 import { IS_YANDEX, invitePayload, platformPause, platformPlayerName } from './platform';
@@ -117,7 +117,7 @@ function Screens() {
 
   const playBots = (opponents: number, level: BotLevel) => {
     const seats: HostSeat[] = [
-      { name: playerName, kind: 'local' },
+      { name: playerName, kind: 'local', supporter: supporterStatus.get().supporter },
       ...Array.from({ length: opponents }, (_, i): HostSeat => ({ name: botSeatName(i + 1), kind: 'bot' })),
     ];
     const session = new HostSession(seats, { botLevel: level });

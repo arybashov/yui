@@ -6,9 +6,11 @@ import { Dict, useT } from '../i18n';
 import { SERVER_URL } from '../net/online';
 import { normalizeRoomCode } from '../net/protocol';
 import { ServerStatus, useServerStatus } from '../net/status';
+import { IS_TELEGRAM } from '../platform';
 import { Rules } from './Rules';
 import { LanguageSwitch } from './LanguageSwitch';
 import { SoundToggle } from './SoundToggle';
+import { Support } from './Support';
 
 interface MenuProps {
   name: string;
@@ -160,6 +162,8 @@ export function Menu({
           </form>
         </div>
       )}
+
+      {IS_TELEGRAM && <Support />}
 
       <div className="menu-help">
         <button type="button" className="btn" onClick={onTutorial}>

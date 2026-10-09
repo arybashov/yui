@@ -13,6 +13,8 @@ export interface ClientMeta {
   platform?: string;
   /** версия клиента */
   version?: string;
+  /** Telegram: подписанные данные игрока (initData) — сервер узнаёт по ним, кто это */
+  tgInitData?: string;
 }
 
 /** Чем игрок занят вне онлайн-комнаты. */
@@ -35,6 +37,10 @@ export type ClientMessage =
   /** где игрок вне онлайна: в меню, играет с ботами или в обучении (для статистики);
    *  engaged — сделал ход в текущей партии */
   | ({ t: 'presence'; activity: Activity; engaged?: boolean } & ClientMeta)
+  /** Telegram: счёт «Поддержать» на amount звёзд */
+  | { t: 'invoice'; amount: number }
+  /** Telegram: проверить ещё раз, поддержал ли игрок (сразу после оплаты) */
+  | { t: 'supporterCheck' }
   /** вкладка видима/скрыта — для учёта времени в игре */
   | { t: 'visible'; visible: boolean };
 
@@ -56,6 +62,10 @@ export type ServerMessage =
   | { t: 'view'; view: PlayerView }
   /** ответ на ping: людей на сервере (кроме спросившего) и сколько из них ищут соперника */
   | { t: 'status'; online: number; searching: number }
+  /** Telegram: поддержал ли игру этот игрок */
+  | { t: 'supporter'; supporter: boolean }
+  /** Telegram: ссылка на счёт или null, если выставить не удалось */
+  | { t: 'invoice'; link: string | null }
   | { t: 'error'; code: NetError };
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

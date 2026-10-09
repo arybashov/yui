@@ -23,6 +23,7 @@ interface TelegramWebApp {
   setHeaderColor(color: string): void;
   setBackgroundColor(color: string): void;
   openTelegramLink(url: string): void;
+  openInvoice(url: string, callback: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void): void;
   onEvent(event: 'activated' | 'deactivated', listener: () => void): void;
   HapticFeedback?: { impactOccurred(style: 'light' | 'medium' | 'heavy'): void };
 }
@@ -118,6 +119,23 @@ export function shareResult(text: string): boolean {
   const url = encodeURIComponent(`https://t.me/${BOT}?startapp`);
   app.openTelegramLink(`https://t.me/share/url?url=${url}&text=${encodeURIComponent(text)}`);
   return true;
+}
+
+/** Подписанные Telegram данные игрока: по ним сервер узнаёт, кто это. Вне Telegram — пусто. */
+export function telegramInitData(): string {
+  return app?.initData ?? '';
+}
+
+/** Окно оплаты звёздами внутри Telegram; результат — как его сообщил Telegram. */
+export function openInvoice(link: string): Promise<string> {
+  return new Promise((resolve) => {
+    if (!app || !app.isVersionAtLeast('6.1')) return resolve('failed');
+    try {
+      app.openInvoice(link, resolve);
+    } catch {
+      resolve('failed');
+    }
+  });
 }
 
 /** Имя игрока в Telegram — ник по умолчанию, пока игрок не ввёл свой. */

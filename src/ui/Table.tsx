@@ -11,7 +11,7 @@ import { Rules } from './Rules';
 import { SoundToggle } from './SoundToggle';
 import { vibrate } from './haptics';
 import { currentStreak, recordMatch } from './streak';
-import { describeAction, playerName, rankLabel } from './text';
+import { describeAction, humanName, playerName, rankLabel } from './text';
 
 interface TableProps {
   session: Session;
@@ -397,7 +397,7 @@ function Result({
         ? t.resultMatchLostYou(GAME_TITLE)
         : t.resultMatchLost(playerName(view.players[view.matchLoser], t), GAME_TITLE);
   }
-  const winnerNames = winners.map((seat) => (seat === me ? `${view.players[seat].name} ${t.youSuffix}` : playerName(view.players[seat], t)));
+  const winnerNames = winners.map((seat) => (seat === me ? `${humanName(view.players[seat])} ${t.youSuffix}` : playerName(view.players[seat], t)));
   if (view.matchLoser !== null && winners.length > 1) title = t.matchWinnersShared(winnerNames.join(', '));
   else if (view.matchLoser !== null && winners[0] === me) title = t.matchWinnerYou;
   else if (view.matchLoser !== null && winners.length === 1) title = t.matchWinner(winnerNames[0]);
@@ -430,7 +430,7 @@ function Result({
           <tbody>
             {order.map(({ player, seat }) => (
               <tr key={seat} className={seat === me ? 'you' : ''}>
-                <td>{seat === me ? `${player.name} ${t.youSuffix}` : playerName(player, t)}</td>
+                <td>{seat === me ? `${humanName(player)} ${t.youSuffix}` : playerName(player, t)}</td>
                 <td>
                   {player.place !== null ? t.wentOut(player.place) : seat === resigned ? t.resignedOutcome : t.leftWithCards}
                 </td>

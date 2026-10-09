@@ -14,6 +14,7 @@ import {
 } from '../src/net/protocol';
 import { createGeoLookup, clientIp } from './geo';
 import { Platform, analyticsIdentity, createStats, platformOf } from './stats';
+import { BotRelay, TelegramUser, createBotRelay, verifyInitData } from './telegram';
 
 // Игровой сервер: держит комнаты и сам ведёт партии, поэтому игра не зависит
 // от вкладки одного из игроков. Правила — те же модули, что и в браузере.
@@ -35,6 +36,10 @@ export interface ServerOptions {
   quickStartMs?: number;
   /** через сколько мс после конца раздачи следующая начнётся сама */
   nextDealMs?: number;
+  /** токен бота Telegram — только для проверки подписи игроков (по умолчанию TELEGRAM_BOT_TOKEN) */
+  telegramBotToken?: string;
+  /** бот на Cloudflare: кто поддержал игру и счета (по умолчанию BOT_RELAY_URL / BOT_RELAY_SECRET) */
+  botRelay?: BotRelay;
 }
 
 interface Member {
@@ -43,6 +48,8 @@ interface Member {
   socket: WebSocket | null;
   visitorId: string;
   platform: Platform;
+  /** Telegram-игрок, поддержавший игру: звёздочка у имени */
+  supporter: boolean;
 }
 
 interface Room {
@@ -70,6 +77,9 @@ interface Conn {
   /** чем занят вне онлайн-комнаты (сообщение presence); в онлайн-комнате главнее она */
   activity: Activity | null;
   engaged: boolean;
+  /** проверенный по подписи игрок Telegram */
+  tgUser: TelegramUser | null;
+  supporter: boolean;
   connectedAt: number;
   lastSeen: number;
   room: Room | null;
@@ -139,6 +149,10 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
 
   const geo = createGeoLookup(options.geoDir ?? process.env.GEO_DIR);
   const stats = createStats(options.statsFile ?? process.env.STATS_FILE ?? `${process.cwd()}/stats.json`);
+  const telegramBotToken = (options.telegramBotToken ?? process.env.TELEGRAM_BOT_TOKEN ?? '').trim();
+  const botRelay =
+    options.botRelay ??
+    createBotRelay((process.env.BOT_RELAY_URL ?? '').trim().replace(/\/$/, ''), (process.env.BOT_RELAY_SECRET ?? '').trim());
 
   /** режим комнаты: двое и больше людей — pvp, иначе игра против ботов */
   const roomMode = (room: Room): 'pvp' | 'ai' => (room.members.length >= 2 ? 'pvp' : 'ai');
@@ -279,6 +293,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
         (m): HostSeat => ({
           name: m.name,
           kind: 'remote',
+          supporter: m.supporter,
           send: (view) => send(m.socket, { t: 'view', view }),
         }),
       ),
@@ -366,6 +381,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       socket,
       visitorId: conn?.visitorId ?? '',
       platform: conn?.platform ?? 'unknown',
+      supporter: conn?.supporter ?? false,
     };
     room.members.push(member);
     seats.set(socket, { room, member });
@@ -386,6 +402,28 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     const p = platformOf(m.platform);
     if (p !== 'unknown') conn.platform = p;
     if (typeof m.version === 'string') conn.version = m.version.slice(0, 20);
+    if (!conn.tgUser && m.tgInitData) {
+      const user = verifyInitData(m.tgInitData, telegramBotToken);
+      if (user) {
+        conn.tgUser = user;
+        void refreshSupporter(conn, false);
+      }
+    }
+  };
+
+  /** Узнать у бота, поддержал ли игрок игру, и показать звёздочку — в меню и за столом. */
+  const refreshSupporter = async (conn: Conn, fresh: boolean) => {
+    if (!conn.tgUser) return;
+    const supporter = await botRelay.isSupporter(conn.tgUser.id, fresh);
+    if (!supporter && !fresh) return;
+    conn.supporter = supporter;
+    const socket = [...conns].find(([, c]) => c === conn)?.[0];
+    if (socket) send(socket, { t: 'supporter', supporter });
+    if (!supporter || !conn.member) return;
+    conn.member.supporter = true;
+    const room = conn.room;
+    const seat = room ? room.members.indexOf(conn.member) : -1;
+    if (room?.session && seat >= 0) room.session.setSupporter(seat);
   };
 
   const onMessage = (socket: WebSocket, message: ClientMessage) => {
@@ -402,6 +440,18 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       const others = new Set<unknown>();
       for (const [s, c] of conns) if (s !== socket && !(me && c.visitorId === me)) others.add(c.visitorId || s);
       return send(socket, { t: 'status', online: others.size, searching });
+    }
+
+    if (message.t === 'supporterCheck') {
+      if (conn) void refreshSupporter(conn, true);
+      return;
+    }
+
+    if (message.t === 'invoice') {
+      if (!conn?.tgUser) return send(socket, { t: 'invoice', link: null });
+      const user = conn.tgUser;
+      void botRelay.invoice(user.id, Number(message.amount), user.lang).then((link) => send(socket, { t: 'invoice', link }));
+      return;
     }
 
     if (message.t === 'presence') {
@@ -545,6 +595,8 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       visible: true,
       activity: null,
       engaged: false,
+      tgUser: null,
+      supporter: false,
       connectedAt: now,
       lastSeen: now,
       room: null,

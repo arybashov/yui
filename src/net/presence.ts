@@ -1,10 +1,12 @@
 import { clientMeta } from './identity';
 import { SERVER_URL } from './online';
-import { Activity, ClientMessage } from './protocol';
+import { Store } from '../store';
+import { Activity, ClientMessage, ServerMessage } from './protocol';
 
 // Присутствие для статистики: пока игра открыта, держим с сервером одно лёгкое соединение
 // и сообщаем, чем занят игрок вне онлайна — меню, игра с ботами, обучение. Без него сервер
 // видел только онлайн-партии. Игре оно не нужно: если связи нет, просто пробуем позже, молча.
+// В Telegram по нему же сервер сообщает, поддержал ли игрок игру, и выдаёт счёт «Поддержать».
 
 const RETRY_MIN_MS = 5000;
 const RETRY_MAX_MS = 120000;
@@ -15,6 +17,24 @@ let engaged = false;
 let retries = 0;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let started = false;
+
+/** Поддержал ли игрок игру (Telegram). Обновляется с сервера. */
+export const supporterStatus = new Store<{ supporter: boolean }>({ supporter: false });
+
+/** Ждущие ответа запросы счёта: сервер отвечает по порядку. */
+const invoiceWaiters: ((link: string | null) => void)[] = [];
+const INVOICE_TIMEOUT_MS = 10000;
+
+function onMessage(event: MessageEvent): void {
+  let message: ServerMessage;
+  try {
+    message = JSON.parse(String(event.data)) as ServerMessage;
+  } catch {
+    return;
+  }
+  if (message.t === 'supporter') supporterStatus.set({ supporter: message.supporter });
+  if (message.t === 'invoice') invoiceWaiters.shift()?.(message.link);
+}
 
 function send(message: ClientMessage): void {
   if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -32,6 +52,7 @@ function sendVisible(): void {
 function lost(dead: WebSocket): void {
   if (socket !== dead) return;
   socket = null;
+  invoiceWaiters.splice(0).forEach((resolve) => resolve(null));
   if (retryTimer) return;
   const delay = Math.min(RETRY_MAX_MS, RETRY_MIN_MS * 2 ** retries++);
   retryTimer = setTimeout(() => {
@@ -53,6 +74,7 @@ function connect(): void {
     sendState();
     sendVisible();
   };
+  next.onmessage = onMessage;
   next.onclose = () => lost(next);
   next.onerror = () => lost(next);
 }
@@ -71,4 +93,28 @@ export function setActivity(next: Activity, nextEngaged = false): void {
   activity = next;
   engaged = nextEngaged;
   sendState();
+}
+
+/** Ссылка на счёт «Поддержать» на amount звёзд; null — сервер или бот сейчас недоступны. */
+export function requestInvoice(amount: number): Promise<string | null> {
+  if (socket?.readyState !== WebSocket.OPEN) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (link: string | null) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      const index = invoiceWaiters.indexOf(finish);
+      if (index >= 0) invoiceWaiters.splice(index, 1);
+      resolve(link);
+    };
+    const timer = setTimeout(() => finish(null), INVOICE_TIMEOUT_MS);
+    invoiceWaiters.push(finish);
+    send({ t: 'invoice', amount });
+  });
+}
+
+/** После оплаты: попросить сервер проверить поддержку заново (бот узнаёт об оплате чуть позже). */
+export function recheckSupporter(): void {
+  send({ t: 'supporterCheck' });
 }

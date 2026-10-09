@@ -9,11 +9,16 @@ const SUIT_SYMBOLS: Record<Suit, string> = { S: '♠', H: '♥', D: '♦', C: '�
 export const rankLabel = (rank: Rank) => RANK_LABELS[rank];
 export const cardLabel = (card: Card) => `${rankLabel(card.rank)}${SUIT_SYMBOLS[card.suit]}`;
 
+/** Имя человека как есть, со звёздочкой, если он поддержал игру. */
+export function humanName(player: PlayerInfo): string {
+  return player.supporter ? `${player.name} ⭐` : player.name;
+}
+
 /** Имя игрока на экране: боты называются на языке интерфейса. */
 export function playerName(player: PlayerInfo, t: Dict): string {
   const bot = botNumber(player);
   if (bot !== null) return t.bot(bot);
-  return player.away ? `${player.name} ${t.botSuffix}` : player.name;
+  return player.away ? `${humanName(player)} ${t.botSuffix}` : humanName(player);
 }
 
 export function describeAction(entry: LogEntry, name: string, isYou: boolean, t: Dict): string {

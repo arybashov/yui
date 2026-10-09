@@ -9,6 +9,7 @@ import { chooseMove } from '../src/game/bot';
 import { PlayerView } from '../src/game/session';
 import { ClientMessage, ServerMessage } from '../src/net/protocol';
 import { startServer } from './server';
+import { signInitData } from './test-telegram';
 
 type Running = ReturnType<typeof startServer>;
 
@@ -328,6 +329,55 @@ describe('присутствие вне онлайна', () => {
     menu.send({ t: 'ping', ...meta });
     expect((await menu.next('status')).online).toBe(1);
     [presence, other, menu].forEach((p) => p.socket.terminate());
+    await server.close();
+  });
+});
+
+describe('поддержка в Telegram', () => {
+  it('поддержавшему — звёздочка за столом, счёт — ссылкой от бота', async () => {
+    const token = '123456:test-token-for-signatures';
+    const supporters = new Set<number>([7]);
+    const relay = {
+      enabled: true,
+      isSupporter: async (id: number) => supporters.has(id),
+      invoice: async (id: number, amount: number) => `https://t.me/$invoice-${id}-${amount}`,
+    };
+    const server = startServer({
+      port: 0,
+      statsFile: join(tmpdir(), `yui-support-${process.pid}-${Date.now()}.json`),
+      telegramBotToken: token,
+      botRelay: relay,
+    });
+    await once(server.http, 'listening');
+    const url = `ws://127.0.0.1:${(server.http.address() as AddressInfo).port}`;
+    const initData = (id: number) =>
+      signInitData({ user: JSON.stringify({ id, first_name: 'T', language_code: 'ru' }), auth_date: String(Math.floor(Date.now() / 1000)) }, token);
+
+    const anna = await new Player(url).open();
+    anna.send({ t: 'create', name: 'Анна', visitorId: 'visitor-anna-0001', tgInitData: initData(7) });
+    const { code } = await anna.next('joined');
+    expect((await anna.next('supporter')).supporter).toBe(true);
+    const boris = await new Player(url).open();
+    boris.send({ t: 'join', code, name: 'Борис', tgInitData: initData(8) });
+    await anna.next('lobby', (m) => m.names.length === 2);
+    anna.send({ t: 'start', bots: 0, level: 'normal' });
+    const view = await boris.view();
+    expect(view.players.map((p) => Boolean(p.supporter))).toEqual([true, false]);
+
+    boris.send({ t: 'invoice', amount: 150 });
+    expect((await boris.next('invoice')).link).toBe('https://t.me/$invoice-8-150');
+    // после оплаты бот уже знает о поддержке: звёздочка появляется прямо за столом
+    supporters.add(8);
+    boris.send({ t: 'supporterCheck' });
+    expect((await boris.next('supporter')).supporter).toBe(true);
+    const updated = await anna.view((v) => Boolean(v.players[1].supporter));
+    expect(updated.players[1].supporter).toBe(true);
+
+    // без подписи Telegram счёт не выставляется
+    const stranger = await new Player(url).open();
+    stranger.send({ t: 'invoice', amount: 50 });
+    expect((await stranger.next('invoice')).link).toBeNull();
+    [anna, boris, stranger].forEach((p) => p.socket.terminate());
     await server.close();
   });
 });

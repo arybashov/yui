@@ -149,6 +149,11 @@ export interface Dict {
   /** Telegram: кнопка и текст приглашения в окне «Поделиться» */
   inviteFriend: string;
   inviteText: string;
+  /** Telegram: «Поддержать» звёздами */
+  supportTitle: string;
+  supportText: string;
+  supportThanks: string;
+  supportFailed: string;
   /** Telegram: «Поделиться результатом» в итогах матча; letters — буквы игрока, например «YU» */
   shareResult: string;
   /** wins — выигранные раздачи, deals — всего раздач в матче */

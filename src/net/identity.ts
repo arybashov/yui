@@ -1,5 +1,5 @@
 import { APP_VERSION } from '../config';
-import { IS_TELEGRAM, IS_YANDEX } from '../platform';
+import { IS_TELEGRAM, IS_YANDEX, telegramInitData } from '../platform';
 import { ClientMeta } from './protocol';
 
 // Анонимный идентификатор посетителя для статистики (не аккаунт). Хранится в
@@ -44,5 +44,6 @@ function platform(): string {
 
 /** Мета для сообщений входа: кто посетитель, с какой площадки, какая версия. */
 export function clientMeta(): ClientMeta {
-  return { visitorId: visitorId(), platform: platform(), version: APP_VERSION };
+  const tgInitData = telegramInitData();
+  return { visitorId: visitorId(), platform: platform(), version: APP_VERSION, ...(tgInitData ? { tgInitData } : {}) };
 }
