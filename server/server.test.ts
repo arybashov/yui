@@ -342,6 +342,9 @@ describe('поддержка в Telegram', () => {
       isSupporter: async (id: number) => supporters.has(id),
       invoice: async (id: number, amount: number) => `https://t.me/$invoice-${id}-${amount}`,
       summary: async () => null,
+      notifyStatus: async () => false,
+      setNotify: async (_id: number, on: boolean) => on,
+      announce: async () => undefined,
     };
     const server = startServer({
       port: 0,
@@ -379,6 +382,63 @@ describe('поддержка в Telegram', () => {
     stranger.send({ t: 'invoice', amount: 50 });
     expect((await stranger.next('invoice')).link).toBeNull();
     [anna, boris, stranger].forEach((p) => p.socket.terminate());
+    await server.close();
+  });
+});
+
+describe('уведомление «ищут соперника»', () => {
+  it('подписка включается, а одинокий ждущий зовёт подписчиков не чаще ограничения', async () => {
+    const token = '123456:test-token-for-signatures';
+    const subscribed = new Set<number>();
+    const announces: number[][] = [];
+    const relay = {
+      enabled: true,
+      isSupporter: async () => false,
+      invoice: async () => null,
+      summary: async () => null,
+      notifyStatus: async (id: number) => subscribed.has(id),
+      setNotify: async (id: number, on: boolean) => {
+        if (on) subscribed.add(id);
+        else subscribed.delete(id);
+        return on;
+      },
+      announce: async (exclude: number[]) => void announces.push(exclude),
+    };
+    const server = startServer({
+      port: 0,
+      statsFile: join(tmpdir(), `yui-notify-${process.pid}-${Date.now()}.json`),
+      telegramBotToken: token,
+      botRelay: relay,
+      quickStartMs: 5000,
+      announceEveryMs: 60000,
+    });
+    await once(server.http, 'listening');
+    const url = `ws://127.0.0.1:${(server.http.address() as AddressInfo).port}`;
+    const initData = signInitData({ user: JSON.stringify({ id: 5, first_name: 'T' }), auth_date: String(Math.floor(Date.now() / 1000)) }, token);
+
+    const tg = await new Player(url).open();
+    tg.send({ t: 'presence', activity: 'menu', visitorId: 'visitor-tg-00005', tgInitData: initData });
+    expect((await tg.next('notify')).on).toBe(false);
+    tg.send({ t: 'notifySet', on: true });
+    expect((await tg.next('notify')).on).toBe(true);
+    expect(subscribed.has(5)).toBe(true);
+
+    // один ждёт соперника — зовём подписчиков, но не того, кто сам сейчас в игре
+    const anna = await new Player(url).open();
+    anna.send({ t: 'quick', name: 'Анна' });
+    await anna.next('lobby');
+    expect(announces).toEqual([[5]]);
+    // второй ждущий в течение ограничения рассылку не повторяет
+    anna.socket.terminate();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const boris = await new Player(url).open();
+    boris.send({ t: 'quick', name: 'Борис' });
+    await boris.next('lobby');
+    expect(announces).toHaveLength(1);
+
+    tg.send({ t: 'notifySet', on: false });
+    expect((await tg.next('notify')).on).toBe(false);
+    [tg, boris].forEach((p) => p.socket.terminate());
     await server.close();
   });
 });

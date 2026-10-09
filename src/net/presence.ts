@@ -21,6 +21,9 @@ let started = false;
 /** Поддержал ли игрок игру (Telegram). Обновляется с сервера. */
 export const supporterStatus = new Store<{ supporter: boolean }>({ supporter: false });
 
+/** Telegram: включена ли подписка «сообщать, когда ищут соперника»; null — ещё не знаем. */
+export const notifyStatus = new Store<{ on: boolean | null }>({ on: null });
+
 /** Ждущие ответа запросы счёта: сервер отвечает по порядку. */
 const invoiceWaiters: ((link: string | null) => void)[] = [];
 const INVOICE_TIMEOUT_MS = 10000;
@@ -34,6 +37,7 @@ function onMessage(event: MessageEvent): void {
   }
   if (message.t === 'supporter') supporterStatus.set({ supporter: message.supporter });
   if (message.t === 'invoice') invoiceWaiters.shift()?.(message.link);
+  if (message.t === 'notify') notifyStatus.set({ on: message.on });
 }
 
 function send(message: ClientMessage): void {
@@ -117,4 +121,9 @@ export function requestInvoice(amount: number): Promise<string | null> {
 /** После оплаты: попросить сервер проверить поддержку заново (бот узнаёт об оплате чуть позже). */
 export function recheckSupporter(): void {
   send({ t: 'supporterCheck' });
+}
+
+/** Включить/выключить «сообщать, когда ищут соперника»; ответ сервера придёт в notifyStatus. */
+export function setNotify(on: boolean): void {
+  send({ t: 'notifySet', on });
 }

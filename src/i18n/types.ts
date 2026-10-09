@@ -150,6 +150,12 @@ export interface Dict {
   inviteFriend: string;
   inviteText: string;
   /** Telegram: «Поддержать» звёздами */
+  /** Telegram: «сообщать, когда ищут соперника» */
+  notifyLabel: string;
+  notifyOn: string;
+  notifyOff: string;
+  notifyHint: string;
+  notifyDenied: string;
   supportTitle: string;
   supportText: string;
   supportThanks: string;

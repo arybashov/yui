@@ -40,6 +40,8 @@ export interface ServerOptions {
   telegramBotToken?: string;
   /** бот на Cloudflare: кто поддержал игру и счета (по умолчанию BOT_RELAY_URL / BOT_RELAY_SECRET) */
   botRelay?: BotRelay;
+  /** как часто можно звать подписчиков «ищут соперника» */
+  announceEveryMs?: number;
 }
 
 interface Member {
@@ -87,6 +89,8 @@ interface Conn {
 }
 
 const ACTIVITIES: Activity[] = ['menu', 'ai', 'tutorial'];
+/** «Ищут соперника» рассылается подписчикам не чаще раза в полчаса (и каждому — раз в сутки, это в боте). */
+const ANNOUNCE_EVERY_MS = 30 * 60 * 1000;
 const MAX_ROOMS = 500;
 const MAX_MESSAGE_BYTES = 4096;
 const PING_INTERVAL_MS = 30000;
@@ -149,6 +153,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
 
   const geo = createGeoLookup(options.geoDir ?? process.env.GEO_DIR);
   const stats = createStats(options.statsFile ?? process.env.STATS_FILE ?? `${process.cwd()}/stats.json`);
+  const announceEveryMs = options.announceEveryMs ?? ANNOUNCE_EVERY_MS;
   const telegramBotToken = (options.telegramBotToken ?? process.env.TELEGRAM_BOT_TOKEN ?? '').trim();
   const botRelay =
     options.botRelay ??
@@ -395,6 +400,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     send(socket, { t: 'joined', code: room.code, token: member.token });
     if (room.quick) scheduleQuick(room);
     else syncLobby(room);
+    if (room.quick && room.members.length === 1) announceSearching();
   };
 
   /** Обновить идентификацию соединения из входящего сообщения. */
@@ -410,8 +416,22 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       if (user) {
         conn.tgUser = user;
         void refreshSupporter(conn, false);
+        void botRelay.notifyStatus(user.id).then((on) => {
+          const socket = [...conns].find(([, c]) => c === conn)?.[0];
+          if (on !== null && socket) send(socket, { t: 'notify', on });
+        });
       }
     }
+  };
+
+  let lastAnnounce = -Infinity;
+  /** Человек один ждёт в быстрой игре: позвать подписчиков, если давно не звали. */
+  const announceSearching = () => {
+    const now = Date.now();
+    if (!botRelay.enabled || now - lastAnnounce < announceEveryMs) return;
+    lastAnnounce = now;
+    const online = [...conns.values()].flatMap((c) => (c.tgUser ? [c.tgUser.id] : []));
+    void botRelay.announce([...new Set(online)]);
   };
 
   /** Узнать у бота, поддержал ли игрок игру, и показать звёздочку — в меню и за столом. */
@@ -443,6 +463,15 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
       const others = new Set<unknown>();
       for (const [s, c] of conns) if (s !== socket && !(me && c.visitorId === me)) others.add(c.visitorId || s);
       return send(socket, { t: 'status', online: others.size, searching });
+    }
+
+    if (message.t === 'notifySet') {
+      if (!conn?.tgUser) return;
+      const user = conn.tgUser;
+      void botRelay.setNotify(user.id, Boolean(message.on), user.lang).then((on) => {
+        if (on !== null) send(socket, { t: 'notify', on });
+      });
+      return;
     }
 
     if (message.t === 'supporterCheck') {

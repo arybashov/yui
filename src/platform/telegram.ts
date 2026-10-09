@@ -23,6 +23,7 @@ interface TelegramWebApp {
   setHeaderColor(color: string): void;
   setBackgroundColor(color: string): void;
   openTelegramLink(url: string): void;
+  requestWriteAccess(callback: (granted: boolean) => void): void;
   openInvoice(url: string, callback: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void): void;
   onEvent(event: 'activated' | 'deactivated', listener: () => void): void;
   HapticFeedback?: { impactOccurred(style: 'light' | 'medium' | 'heavy'): void };
@@ -124,6 +125,18 @@ export function shareResult(text: string): boolean {
 /** Подписанные Telegram данные игрока: по ним сервер узнаёт, кто это. Вне Telegram — пусто. */
 export function telegramInitData(): string {
   return app?.initData ?? '';
+}
+
+/** Спросить у игрока разрешение, чтобы бот мог ему писать (Telegram покажет своё окно). */
+export function requestWriteAccess(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (!app || !app.isVersionAtLeast('6.9')) return resolve(false);
+    try {
+      app.requestWriteAccess(resolve);
+    } catch {
+      resolve(false);
+    }
+  });
 }
 
 /** Окно оплаты звёздами внутри Telegram; результат — как его сообщил Telegram. */

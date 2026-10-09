@@ -8,6 +8,7 @@ preview_urls = false
 
 [vars]
 GAME_URL = "https://yui.com.ru/tg/"
+BOT_USERNAME = "yui_cards_bot"
 # куда писать с вопросами об оплате (ответ на /paysupport)
 SUPPORT_EMAIL = "arybashov@gmail.com"
 

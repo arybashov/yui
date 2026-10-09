@@ -41,6 +41,8 @@ export type ClientMessage =
   | { t: 'invoice'; amount: number }
   /** Telegram: проверить ещё раз, поддержал ли игрок (сразу после оплаты) */
   | { t: 'supporterCheck' }
+  /** Telegram: включить/выключить «сообщать, когда ищут соперника» */
+  | { t: 'notifySet'; on: boolean }
   /** вкладка видима/скрыта — для учёта времени в игре */
   | { t: 'visible'; visible: boolean };
 
@@ -66,6 +68,8 @@ export type ServerMessage =
   | { t: 'supporter'; supporter: boolean }
   /** Telegram: ссылка на счёт или null, если выставить не удалось */
   | { t: 'invoice'; link: string | null }
+  /** Telegram: включена ли подписка «сообщать, когда ищут соперника» */
+  | { t: 'notify'; on: boolean }
   | { t: 'error'; code: NetError };
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

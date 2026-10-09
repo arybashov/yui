@@ -111,6 +111,38 @@ export function createBotRelay(url: string, secret: string) {
       }
     },
 
+    /** Подписан ли игрок на «ищут соперника»; null — бот не ответил. */
+    async notifyStatus(userId: number): Promise<boolean | null> {
+      if (!url || !secret) return null;
+      try {
+        return Boolean((await call(`/notify?id=${userId}`))?.on);
+      } catch (error) {
+        console.warn((error as Error).message);
+        return null;
+      }
+    },
+
+    /** Включить/выключить подписку; возвращает новое состояние или null, если бот не ответил. */
+    async setNotify(userId: number, on: boolean, lang: string): Promise<boolean | null> {
+      if (!url || !secret) return null;
+      try {
+        return Boolean((await call('/notify', { method: 'POST', body: JSON.stringify({ userId, on, lang }) }))?.on);
+      } catch (error) {
+        console.warn((error as Error).message);
+        return null;
+      }
+    },
+
+    /** Кто-то ищет соперника — бот напишет подписчикам, кроме exclude (они и так в игре). */
+    async announce(exclude: number[]): Promise<void> {
+      if (!url || !secret) return;
+      try {
+        await call('/announce', { method: 'POST', body: JSON.stringify({ exclude }) });
+      } catch (error) {
+        console.warn((error as Error).message);
+      }
+    },
+
     /** Ссылка на счёт «Поддержать» на amount звёзд или null, если бот недоступен. */
     async invoice(userId: number, amount: number, lang: string): Promise<string | null> {
       if (!url || !secret || !SUPPORT_AMOUNTS.includes(amount)) return null;

@@ -4,10 +4,15 @@
 //
 // Секреты (npx wrangler secret put ...): BOT_TOKEN — токен бота, WEBHOOK_SECRET — подпись вебхука
 // Telegram, API_SECRET — пароль игрового сервера (тот же, что BOT_RELAY_SECRET в /opt/yui/yui.env).
-// Поддержавшие хранятся в KV SUPPORTERS: ключ user:<telegram id>.
+// В KV SUPPORTERS: user:<telegram id> — поддержавшие; notify:<telegram id> — подписка
+// «сообщать, когда ищут соперника» ({ lang, last } — язык и когда писали последний раз).
 
 /** Суммы в звёздах — те же, что кнопки в игре (src/ui/Support.tsx). */
 const AMOUNTS = [50, 150, 500];
+/** Подписчику «ищут соперника» пишем не чаще раза в сутки. */
+const NOTIFY_EVERY_MS = 24 * 3600 * 1000;
+/** Бесплатный тариф Cloudflare разрешает около 50 внешних запросов на вызов — с запасом. */
+const NOTIFY_BATCH = 40;
 
 const TEXTS = {
   ru: {
@@ -19,6 +24,8 @@ const TEXTS = {
     play: 'Играть',
     paysupport: (email) => `Вопросы об оплате и возврате звёзд — на почту ${email}. Укажите, когда платили и сколько звёзд.`,
     badAmount: 'Такой суммы нет. Откройте игру и выберите сумму там.',
+    searching: 'Сейчас в YUI ищут соперника — сыграем?',
+    searchingButton: 'Сыграть',
   },
   en: {
     invoiceTitle: 'Support YUI',
@@ -29,6 +36,8 @@ const TEXTS = {
     play: 'Play',
     paysupport: (email) => `For payment and refund questions, email ${email}. Say when you paid and how many stars.`,
     badAmount: 'There is no such amount. Open the game and choose one there.',
+    searching: 'Someone is looking for a YUI opponent right now — want to play?',
+    searchingButton: 'Play',
   },
 };
 
@@ -134,6 +143,51 @@ export default {
         cursor = page.list_complete ? undefined : page.cursor;
       } while (cursor);
       return json({ period, total });
+    }
+
+    // подписка «сообщать, когда ищут соперника»: включить/выключить и узнать
+    if (url.pathname === '/notify' && request.method === 'POST') {
+      const { userId, on, lang } = await request.json();
+      if (!Number.isSafeInteger(userId) || userId <= 0) return json({ error: 'bad request' }, 400);
+      if (on) await env.SUPPORTERS.put(`notify:${userId}`, JSON.stringify({ lang: lang === 'ru' ? 'ru' : 'en', last: 0 }));
+      else await env.SUPPORTERS.delete(`notify:${userId}`);
+      return json({ on: Boolean(on) });
+    }
+    if (url.pathname === '/notify' && request.method === 'GET') {
+      const id = Number(url.searchParams.get('id'));
+      if (!Number.isSafeInteger(id) || id <= 0) return json({ error: 'bad id' }, 400);
+      return json({ on: (await env.SUPPORTERS.get(`notify:${id}`)) !== null });
+    }
+
+    // кто-то ищет соперника: написать подписчикам, кроме тех, кто сейчас в игре
+    if (url.pathname === '/announce' && request.method === 'POST') {
+      const { exclude = [] } = await request.json();
+      const skip = new Set(exclude.map(Number));
+      const now = Date.now();
+      let sent = 0;
+      let cursor;
+      outer: do {
+        const page = await env.SUPPORTERS.list({ prefix: 'notify:', cursor });
+        for (const { name } of page.keys) {
+          const id = Number(name.slice('notify:'.length));
+          if (skip.has(id)) continue;
+          const record = await env.SUPPORTERS.get(name, 'json');
+          if (!record || now - record.last < NOTIFY_EVERY_MS) continue;
+          const t = textsFor(record.lang);
+          const result = await telegram(env, 'sendMessage', {
+            chat_id: id,
+            text: t.searching,
+            reply_markup: { inline_keyboard: [[{ text: t.searchingButton, url: `https://t.me/${env.BOT_USERNAME}?startapp=quick` }]] },
+          });
+          // игрок закрыл боту доступ — больше не пишем
+          if (!result.ok && result.error_code === 403) await env.SUPPORTERS.delete(name);
+          else await env.SUPPORTERS.put(name, JSON.stringify({ ...record, last: now }));
+          if (result.ok) sent++;
+          if (sent >= NOTIFY_BATCH) break outer;
+        }
+        cursor = page.list_complete ? undefined : page.cursor;
+      } while (cursor);
+      return json({ sent });
     }
 
     if (url.pathname === '/invoice' && request.method === 'POST') {

@@ -10,6 +10,7 @@ import { IS_TELEGRAM } from '../platform';
 import { Rules } from './Rules';
 import { LanguageSwitch } from './LanguageSwitch';
 import { SoundToggle } from './SoundToggle';
+import { NotifyToggle } from './NotifyToggle';
 import { Support } from './Support';
 
 interface MenuProps {
@@ -135,6 +136,7 @@ export function Menu({
                 {t.quickMatch}
               </button>
               <p className="muted hint">{t.quickNote}</p>
+              {IS_TELEGRAM && <NotifyToggle />}
               <h3 className="sub">{t.withFriends}</h3>
             </>
           )}

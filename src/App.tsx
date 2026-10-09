@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BotLevel } from './game/bot';
 import { HostSeat, HostSession, botSeatName } from './game/session';
 import { useT } from './i18n';
@@ -21,6 +21,8 @@ type Screen =
   | { kind: 'guest'; client: GuestClient; code: string };
 
 const NAME_KEY = 'yui.name';
+/** startapp=quick в ссылке бота — сразу в быструю игру (рассылка «ищут соперника» в bot/worker.js) */
+const QUICK_PAYLOAD = 'quick';
 /** Телефон, повёрнутый горизонтально: играть так тесно, просим повернуть (то же условие в styles.css). */
 const LANDSCAPE_PHONE = '(orientation: landscape) and (pointer: coarse) and (max-height: 540px)';
 
@@ -72,9 +74,19 @@ function Screens() {
   const [screen, setScreen] = useState<Screen>({ kind: 'menu' });
   const [name, setName] = useState(loadName);
   const [roomCode] = useState(() =>
-    normalizeRoomCode(new URLSearchParams(location.search).get('room') ?? invitePayload()),
+    invitePayload() === QUICK_PAYLOAD
+      ? ''
+      : normalizeRoomCode(new URLSearchParams(location.search).get('room') ?? invitePayload()),
   );
   const playerName = name.trim() || t.defaultName;
+
+  // Кнопка «Сыграть» из уведомления бота «ищут соперника» открывает игру сразу в быстрой игре.
+  const quickLaunch = useRef(invitePayload() === QUICK_PAYLOAD && Boolean(SERVER_URL));
+  useEffect(() => {
+    if (!quickLaunch.current) return;
+    quickLaunch.current = false;
+    setScreen({ kind: 'online', room: new OnlineRoom(SERVER_URL, { quick: true, name: playerName }) });
+  }, []);
 
   // Пока площадка держит игру на паузе (реклама, свёрнутое окно), боты не ходят.
   const localSession = screen.kind === 'local' ? screen.session : null;
