@@ -58,6 +58,16 @@ const RELAY_TIMEOUT_MS = 6000;
 /** «не поддерживал» перепроверяем не чаще раза в 10 минут, «поддерживал» — навсегда */
 const NEGATIVE_TTL_MS = 10 * 60 * 1000;
 
+interface StarsCount {
+  stars: number;
+  payments: number;
+  supporters: number;
+}
+export interface StarsSummary {
+  period: StarsCount;
+  total: StarsCount;
+}
+
 /** Бот на Cloudflare: кто поддержал игру и счёт на оплату. Без адреса — всё «нет». */
 export function createBotRelay(url: string, secret: string) {
   const known = new Map<number, { supporter: boolean; at: number }>();
@@ -87,6 +97,17 @@ export function createBotRelay(url: string, secret: string) {
       } catch (error) {
         console.warn((error as Error).message);
         return cached?.supporter ?? false;
+      }
+    },
+
+    /** Звёзды для админки: за период с since (мс) и за всё время; null — бот недоступен или не настроен. */
+    async summary(since: number): Promise<StarsSummary | null> {
+      if (!url || !secret) return null;
+      try {
+        return (await call(`/summary?since=${since}`)) as StarsSummary;
+      } catch (error) {
+        console.warn((error as Error).message);
+        return null;
       }
     },
 

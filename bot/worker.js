@@ -112,6 +112,30 @@ export default {
       return json({ supporter: (await env.SUPPORTERS.get(`user:${id}`)) !== null });
     }
 
+    // сводка для админки: звёзды и поддержавшие за период (since, мс) и за всё время
+    if (url.pathname === '/summary' && request.method === 'GET') {
+      const since = Number(url.searchParams.get('since')) || 0;
+      const total = { stars: 0, payments: 0, supporters: 0 };
+      const period = { stars: 0, payments: 0, supporters: 0 };
+      let cursor;
+      do {
+        const page = await env.SUPPORTERS.list({ prefix: 'user:', cursor });
+        for (const { name } of page.keys) {
+          const record = await env.SUPPORTERS.get(name, 'json');
+          if (!record) continue;
+          const recent = record.payments.filter((p) => p.at >= since);
+          total.supporters++;
+          total.stars += record.total;
+          total.payments += record.payments.length;
+          if (recent.length) period.supporters++;
+          period.payments += recent.length;
+          period.stars += recent.reduce((sum, p) => sum + p.amount, 0);
+        }
+        cursor = page.list_complete ? undefined : page.cursor;
+      } while (cursor);
+      return json({ period, total });
+    }
+
     if (url.pathname === '/invoice' && request.method === 'POST') {
       const { userId, amount, lang } = await request.json();
       if (!Number.isSafeInteger(userId) || !AMOUNTS.includes(amount)) return json({ error: 'bad request' }, 400);

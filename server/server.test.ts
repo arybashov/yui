@@ -341,6 +341,7 @@ describe('поддержка в Telegram', () => {
       enabled: true,
       isSupporter: async (id: number) => supporters.has(id),
       invoice: async (id: number, amount: number) => `https://t.me/$invoice-${id}-${amount}`,
+      summary: async () => null,
     };
     const server = startServer({
       port: 0,

@@ -213,7 +213,7 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
     };
   };
 
-  const http = createServer((request, response) => {
+  const http = createServer(async (request, response) => {
     const url = request.url ?? '';
     if (url === '/health') {
       response.writeHead(200, { 'content-type': 'application/json' });
@@ -236,9 +236,12 @@ export function startServer(options: ServerOptions): { http: Server; close: () =
         body = adminData();
       } else {
         const q = new URL(url, 'http://localhost').searchParams;
+        const summary = stats.summary(q.get('days'), q.get('platform'), q.get('mode'));
         body = {
-          ...stats.summary(q.get('days'), q.get('platform'), q.get('mode')),
+          ...summary,
           geo: { available: geo.available, updatedAt: geo.updatedAt },
+          // звёзды Telegram за тот же период; null — бот не ответил (поле есть только у YUI)
+          stars: botRelay.enabled ? await botRelay.summary(Date.parse(`${summary.start}T00:00:00+03:00`)) : null,
         };
       }
       response.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });

@@ -59,7 +59,9 @@ function render(d){
   metric('Начато партий',nf.format(t.matches),nf.format(t.noActions)+' без действий человека'),
   metric('Завершено партий',nf.format(t.completed),t.completionRate==null?'Нет начатых партий':t.completionRate.toFixed(1)+'% от начатых · '+t.forfeits+' сдач'),
   metric('Средняя / медиана партии',duration(t.avgMatchSeconds)+' / '+duration(t.medianMatchSeconds),t.timedMatches+' партий · от начала до конца, включая паузы'),
-  metric('Не завершено',nf.format(t.unfinished),t.dormant+' без действий более суток · могут быть продолжены')
+  metric('Не завершено',nf.format(t.unfinished),t.dormant+' без действий более суток · могут быть продолжены'),
+  // звёзды Telegram — только у YUI: сервер присылает поле stars (null — бот не ответил)
+  ...('stars' in d?[d.stars?metric('Звёзды Telegram',nf.format(d.stars.period.stars)+' ⭐',nf.format(d.stars.period.payments)+' платежей · '+nf.format(d.stars.period.supporters)+' поддержали · всего '+nf.format(d.stars.total.stars)+' ⭐ от '+nf.format(d.stars.total.supporters)):metric('Звёзды Telegram','—','Бот платежей не ответил, попробуйте обновить')]:[])
  );
  $('coverage').textContent='Точный учёт посетителей, стран и времени ведётся с '+date(d.since)+'. '+(t.historicalMatches? 'В число партий включено '+t.historicalMatches+' старых сохранений; их длительность не восстановлена. ':'')+'Боты не входят в число игроков. Партии с отладочными командами исключены.';
  $('updated').textContent='Обновлено '+date(d.now);
