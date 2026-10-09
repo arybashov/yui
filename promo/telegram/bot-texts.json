@@ -1,0 +1,12 @@
+{
+  "default": {
+    "name": "YUI",
+    "short_description": "A fast card game: shed every card first and never collect YUI. Play with friends right in Telegram.",
+    "description": "YUI is a fast card game for 2–5 players. 20 cards from ten to ace, no suits, no trumps.\n\nPlay the same rank or higher, drop all four of a kind at once and be the first to shed your hand. The last player holding cards gets a letter — collect YUI and you lose the match.\n\n🃏 Play against bots\n👥 Online with friends — invite them with one link\n🎓 A two-minute tutorial\n\nTap the button below to start 👇"
+  },
+  "ru": {
+    "name": "YUI",
+    "short_description": "Быстрая карточная игра: сбросьте все карты первым и не соберите YUI. Играйте с друзьями прямо в Telegram.",
+    "description": "YUI — быстрая карточная игра на 2–5 игроков. 20 карт от десятки до туза, без мастей и козырей.\n\nКладите карту того же ранга или старше, сбрасывайте все четыре одинаковые разом и избавьтесь от карт первым. Последний получает букву — соберёте YUI, проиграли матч.\n\n🃏 Игра с ботами\n👥 Онлайн с друзьями — позовите их одной ссылкой\n🎓 Обучение за две минуты\n\nНажмите кнопку внизу, чтобы начать 👇"
+  }
+}
